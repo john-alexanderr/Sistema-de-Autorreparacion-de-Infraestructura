@@ -61,7 +61,7 @@ def _verify_owner(actual: dict[str, str], expected: dict[str, str], allow_missin
 
 
 def _instance(resource: dict) -> tuple[dict, dict]:
-    instance_id = resource.get("instance_id")
+    instance_id = resource.get("id")
     expected_tags = resource.get("expected_tags")
     if not isinstance(instance_id, str) or not instance_id or not isinstance(expected_tags, dict):
         raise PermanentError("EC2 inventory record is incomplete")
@@ -88,7 +88,7 @@ def _repair_instance(resource: dict) -> str:
         raise RetryableError("EC2 instance is still starting")
     if state != "stopped":
         raise PermanentError("EC2 instance is not in a repairable state")
-    instance_id = resource["instance_id"]
+    instance_id = resource["id"]
     _aws_call("ec2", "start_instances", InstanceIds=[instance_id])
     observed, _ = _instance(resource)
     state = observed.get("State", {}).get("Name")
@@ -116,7 +116,7 @@ def _bucket_tags(s3, bucket_name: str) -> dict[str, str]:
 
 
 def _repair_bucket(resource: dict) -> str:
-    bucket_name = resource.get("bucket_name")
+    bucket_name = resource.get("id")
     expected = resource.get("expected_tags")
     if not isinstance(bucket_name, str) or not bucket_name or not isinstance(expected, dict):
         raise PermanentError("S3 inventory record is incomplete")

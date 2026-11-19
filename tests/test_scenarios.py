@@ -36,7 +36,7 @@ def inventory() -> dict:
         "node-01": {
             "type": "ec2",
             "group_id": "grupo-01",
-            "instance_id": "i-test-001",
+            "id": "i-test-001",
             "security_group_id": "sg-test-001",
             "expected_tags": tags,
             "status": "ready",

@@ -65,10 +65,10 @@ def validate(event: dict, inventory: dict) -> dict:
         raise ValidationError("Inventory ownership tags are inconsistent")
 
     if expected_resource_type == "ec2":
-        for key in ("instance_id", "security_group_id"):
+        for key in ("id", "security_group_id"):
             if not isinstance(resource.get(key), str) or not resource[key]:
                 raise ValidationError("EC2 inventory record is incomplete")
-    elif not isinstance(resource.get("bucket_name"), str) or not resource["bucket_name"]:
+    elif not isinstance(resource.get("id"), str) or not resource["id"]:
         raise ValidationError("S3 inventory record is incomplete")
 
     return dict(event)

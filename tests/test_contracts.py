@@ -19,7 +19,7 @@ def inventory() -> dict:
         "node-01": {
             "type": "ec2",
             "group_id": "grupo-01",
-            "instance_id": "i-test-001",
+            "id": "i-test-001",
             "security_group_id": "sg-test-001",
             "expected_tags": {**ownership, "Name": "fenix-grupo-01-node"},
             "status": "ready",
@@ -27,7 +27,7 @@ def inventory() -> dict:
         "bucket-01": {
             "type": "s3",
             "group_id": "grupo-01",
-            "bucket_name": "fenix-grupo-01-demo",
+            "id": "fenix-grupo-01-demo",
             "expected_tags": ownership,
             "status": "ready",
         },
@@ -104,6 +104,27 @@ def test_event_contract_requires_ready_owned_inventory_alias():
     allowed["node-01"]["expected_tags"]["GroupId"] = "other-group"
     with pytest.raises(ValidationError):
         validate(event(), allowed)
+
+
+@pytest.mark.base
+def test_event_contract_requires_canonical_inventory_id_key():
+    allowed = inventory()
+    bucket_event = event(
+        event_id="evt-bucket-001",
+        event_type="bucket.tags_missing",
+        resource_id="bucket-01",
+    )
+    assert validate(event(), allowed)["resource_id"] == "node-01"
+    assert validate(bucket_event, allowed)["resource_id"] == "bucket-01"
+
+    for alias, obsolete_key, target_event in (
+        ("node-01", "instance_id", event()),
+        ("bucket-01", "bucket_name", bucket_event),
+    ):
+        resource = allowed[alias]
+        resource[obsolete_key] = resource.pop("id")
+        with pytest.raises(ValidationError):
+            validate(target_event, allowed)
 
 
 @pytest.mark.base

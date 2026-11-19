@@ -2,11 +2,23 @@
 
 import gzip
 import json
+import logging
 from threading import Event, Thread
 
 import pytest
 
-from fenix.utils.logging_json import setup
+from fenix.utils.logging_json import JSONFormatter, setup
+
+
+@pytest.mark.base
+def test_json_formatter_emits_latency_ms_or_null_when_not_applicable():
+    record = logging.LogRecord("formatter-test", logging.INFO, __file__, 1, "test", (), None)
+    formatter = JSONFormatter()
+
+    assert json.loads(formatter.format(record))["latency_ms"] is None
+
+    record.latency_ms = 42.5
+    assert json.loads(formatter.format(record))["latency_ms"] == 42.5
 
 
 @pytest.mark.base

@@ -97,7 +97,7 @@ def _ensure_bucket(s3, inventory: dict, group: str, bucket_name: str, tags: dict
     record = {
         "type": "s3",
         "group_id": group,
-        "bucket_name": bucket_name,
+        "id": bucket_name,
         "expected_tags": tags,
         "status": "provisioning",
         "created_by_setup": bool(previous.get("created_by_setup")),
@@ -201,13 +201,11 @@ def setup_demo(group: str) -> dict:
     node_record = {
         "type": "ec2",
         "group_id": group,
-        "instance_id": "pending",
         "image_id": saved_image_id if isinstance(saved_image_id, str) else None,
         "security_group_id": security_group_id,
         "expected_tags": node_tags,
         "status": "provisioning",
     }
-    _save_entry(inventory, "node-01", node_record)
 
     instance = _find_instance(ec2, node_tags)
     if instance is None:
@@ -223,7 +221,6 @@ def setup_demo(group: str) -> dict:
             raise PermanentError("LocalStack did not provide an available mock image")
         if node_record["image_id"] is None:
             node_record["image_id"] = image_ids[0]
-            _save_entry(inventory, "node-01", node_record)
         elif node_record["image_id"] not in image_ids:
             raise PermanentError("Saved LocalStack mock image is no longer available")
         token = hashlib.sha256(f"ppa2-fenix:{group}:node:v1".encode("utf-8")).hexdigest()
@@ -261,7 +258,7 @@ def setup_demo(group: str) -> dict:
     security_groups = {item.get("GroupId") for item in instance.get("SecurityGroups", [])}
     if security_group_id not in security_groups:
         raise PermanentError("EC2 instance is attached to an unexpected security group")
-    node_record["instance_id"] = instance_id
+    node_record["id"] = instance_id
     node_record["status"] = "ready"
     _save_entry(inventory, "node-01", node_record)
 
@@ -293,7 +290,7 @@ def inject_fault(alias: str) -> None:
     _require_tags(expected, owner_markers)
 
     if alias == "node-01" and resource.get("type") == "ec2":
-        instance_id = resource.get("instance_id")
+        instance_id = resource.get("id")
         if not isinstance(instance_id, str) or not instance_id or instance_id == "pending":
             raise ValidationError("EC2 inventory record is incomplete")
         ec2 = client("ec2")
@@ -323,7 +320,7 @@ def inject_fault(alias: str) -> None:
         raise PermanentError("EC2 stop was not confirmed after bounded polling")
 
     if alias == "bucket-01" and resource.get("type") == "s3":
-        bucket_name = resource.get("bucket_name")
+        bucket_name = resource.get("id")
         if not isinstance(bucket_name, str) or not bucket_name:
             raise ValidationError("S3 inventory record is incomplete")
         if bucket_name != f"fenix-{group}-demo":

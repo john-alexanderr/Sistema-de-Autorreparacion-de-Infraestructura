@@ -56,7 +56,7 @@ def _delete_owned_resources(context: dict) -> None:
 
     node = inventory.get("node-01") if isinstance(inventory, dict) else None
     if isinstance(node, dict) and node.get("group_id") == group:
-        instance_id = node.get("instance_id")
+        instance_id = node.get("id")
         if isinstance(instance_id, str) and instance_id.startswith("i-"):
             response = ec2.describe_instances(InstanceIds=[instance_id])
             instances = [
@@ -91,7 +91,7 @@ def _delete_owned_resources(context: dict) -> None:
 
     bucket = inventory.get("bucket-01") if isinstance(inventory, dict) else None
     if isinstance(bucket, dict) and bucket.get("group_id") == group:
-        bucket_name = bucket.get("bucket_name")
+        bucket_name = bucket.get("id")
         if isinstance(bucket_name, str):
             try:
                 tags = _tag_map(s3.get_bucket_tagging(Bucket=bucket_name).get("TagSet", []))
@@ -151,8 +151,14 @@ def test_f01_queue_and_demo_setup_are_idempotent(local_lab):
     first_inventory = demo.setup_demo(local_lab["group"])
     second_inventory = demo.setup_demo(local_lab["group"])
     assert first_urls == second_urls
-    assert first_inventory["node-01"]["instance_id"] == second_inventory["node-01"]["instance_id"]
-    assert first_inventory["bucket-01"]["bucket_name"] == second_inventory["bucket-01"]["bucket_name"]
+    assert first_inventory["node-01"]["id"] == second_inventory["node-01"]["id"]
+    assert first_inventory["bucket-01"]["id"] == second_inventory["bucket-01"]["id"]
+    assert {"id", "security_group_id", "expected_tags"} <= first_inventory[
+        "node-01"
+    ].keys()
+    assert {"id", "expected_tags"} <= first_inventory["bucket-01"].keys()
+    assert "instance_id" not in first_inventory["node-01"]
+    assert "bucket_name" not in first_inventory["bucket-01"]
     names = client("sqs").list_queues(QueueNamePrefix=local_lab["prefix"]).get("QueueUrls", [])
     assert len(names) == 2
     work_attributes = client("sqs").get_queue_attributes(
@@ -206,7 +212,7 @@ def test_f02_verified_ec2_repair_durable_ledger_mocked_telegram_and_real_ack(loc
 
     record = load(str(local_lab["events_path"]))[target["event_id"]]
     resource = load(str(local_lab["inventory_path"]))["node-01"]
-    instance = client("ec2").describe_instances(InstanceIds=[resource["instance_id"]])
+    instance = client("ec2").describe_instances(InstanceIds=[resource["id"]])
     state = instance["Reservations"][0]["Instances"][0]["State"]["Name"]
     assert state == "running"
     assert record["repair_done"] is True and record["notified"] is True
@@ -225,15 +231,15 @@ def test_f03_bucket_repair_preserves_unrelated_tags(local_lab, monkeypatch):
     demo.setup_demo(local_lab["group"])
     resource = load(str(local_lab["inventory_path"]))["bucket-01"]
     s3 = client("s3")
-    tags = s3.get_bucket_tagging(Bucket=resource["bucket_name"])["TagSet"]
+    tags = s3.get_bucket_tagging(Bucket=resource["id"])["TagSet"]
     tags.append({"Key": "Department", "Value": "test-lab"})
-    s3.put_bucket_tagging(Bucket=resource["bucket_name"], Tagging={"TagSet": tags})
+    s3.put_bucket_tagging(Bucket=resource["id"], Tagging={"TagSet": tags})
     demo.inject_fault("bucket-01")
     monkeypatch.setattr(remediation, "notify", lambda _text: None)
     remediation.handle(
         _event(local_lab["group"], "bucket-01", "bucket.tags_missing")
     )
-    repaired = _tag_map(s3.get_bucket_tagging(Bucket=resource["bucket_name"])["TagSet"])
+    repaired = _tag_map(s3.get_bucket_tagging(Bucket=resource["id"])["TagSet"])
     assert repaired["Owner"] == local_lab["group"]
     assert repaired["Department"] == "test-lab"
 

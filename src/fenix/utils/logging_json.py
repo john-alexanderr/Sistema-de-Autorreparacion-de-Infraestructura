@@ -39,7 +39,15 @@ class JSONFormatter(logging.Formatter):
         data = {"timestamp": datetime.fromtimestamp(record.created, timezone.utc).isoformat(),
                 "level": record.levelname, "message": _safe_message(record.getMessage()),
                 "process": record.process, "thread": record.threadName}
-        for name in ("event_id", "message_id", "resource_id", "attempt", "action", "status"):
+        for name in (
+            "event_id",
+            "message_id",
+            "resource_id",
+            "attempt",
+            "action",
+            "status",
+            "latency_ms",
+        ):
             data[name] = getattr(record, name, None)
         return json.dumps(data, ensure_ascii=False)
 

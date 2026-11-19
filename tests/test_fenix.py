@@ -1,6 +1,8 @@
 """Offline HMAC and FastAPI request-boundary tests."""
 
 import asyncio
+import json
+import logging
 import time
 
 import httpx
@@ -10,6 +12,7 @@ from botocore.exceptions import ClientError
 from fenix.services import receiver
 from fenix.utils.crypto import signature, verify
 from fenix.utils.errors import ValidationError
+from fenix.utils.logging_json import JSONFormatter
 
 
 SECRET = "test-secret-long-enough-for-hmac"
@@ -20,7 +23,7 @@ def valid_inventory() -> dict:
         "node-01": {
             "type": "ec2",
             "group_id": "grupo-01",
-            "instance_id": "i-test-001",
+            "id": "i-test-001",
             "security_group_id": "sg-test-001",
             "expected_tags": {
                 "ManagedBy": "ppa2",
@@ -142,6 +145,38 @@ def test_valid_signed_event_returns_202_only_after_publish_confirmation(monkeypa
         "message_id": "message-001",
     }
     assert published[0]["event_id"] == "evt-node-001"
+
+
+@pytest.mark.base
+def test_published_event_logs_observed_latency_ms(monkeypatch, caplog):
+    published = []
+    configure_receiver(monkeypatch, published)
+
+    class MockClock:
+        readings = iter((12.0, 12.125))
+
+        @classmethod
+        def perf_counter(cls):
+            return next(cls.readings)
+
+    monkeypatch.setattr(receiver, "time", MockClock)
+    body = (
+        b'{"schema_version":1,"event_id":"evt-node-001","event_type":"instance.stopped",'
+        b'"resource_id":"node-01","occurred_at":"2026-10-22T18:00:00Z","simulate_failures":0}'
+    )
+    with caplog.at_level(logging.INFO, logger=receiver.logger.name):
+        response = post(body, {"X-Webhook-Signature": signed_header(body)})
+
+    assert response.status_code == 202
+    assert published[0]["event_id"] == "evt-node-001"
+    records = [record for record in caplog.records if record.name == receiver.logger.name]
+    assert len(records) == 1
+    assert records[0].getMessage() == "webhook_published"
+    assert records[0].latency_ms == pytest.approx(125.0)
+    formatted = json.loads(JSONFormatter().format(records[0]))
+    assert formatted["latency_ms"] == pytest.approx(125.0)
+    assert formatted["event_id"] == "evt-node-001"
+    assert formatted["message_id"] == "message-001"
 
 
 @pytest.mark.base

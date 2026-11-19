@@ -1,7 +1,10 @@
 """Authenticated FastAPI webhook that accepts events only after SQS confirms them."""
 
 import json
+import logging
 import os
+import time
+from contextlib import asynccontextmanager
 
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import FastAPI, HTTPException, Request
@@ -11,11 +14,24 @@ from fenix.services.events import validate
 from fenix.services.sqs import publish, queue_url
 from fenix.utils.crypto import verify
 from fenix.utils.errors import ValidationError
+from fenix.utils.logging_json import setup as setup_logging
 from fenix.utils.state import load
 
 
 INVENTORY_PATH = "data/inventory.json"
-app = FastAPI(title="Fénix webhook receiver")
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    _logger, listener = setup_logging("fenix-receiver")
+    try:
+        yield
+    finally:
+        listener.stop()
+
+
+app = FastAPI(title="Fénix webhook receiver", lifespan=_lifespan)
+logger = logging.getLogger("fenix-receiver")
 
 
 def _unique_object(pairs: list[tuple[str, object]]) -> dict:
@@ -39,6 +55,7 @@ def _enqueue(event: dict) -> tuple[str, str]:
 @app.post("/webhook", status_code=202)
 async def webhook(request: Request) -> dict:
     """Authenticate raw request bytes, validate the event, and publish it once."""
+    started_at = time.perf_counter()
     raw = await request.body()
     if len(raw) > 16_384:
         raise HTTPException(status_code=413, detail="Request body is too large")
@@ -75,6 +92,18 @@ async def webhook(request: Request) -> dict:
         _, message_id = await run_in_threadpool(_enqueue, validated)
     except (BotoCoreError, ClientError, OSError, ValidationError, ValueError, KeyError):
         raise HTTPException(status_code=503, detail="Event queue is unavailable") from None
+    latency_ms = (time.perf_counter() - started_at) * 1000
+    logger.info(
+        "webhook_published",
+        extra={
+            "event_id": validated["event_id"],
+            "message_id": message_id,
+            "resource_id": validated["resource_id"],
+            "action": "publish",
+            "status": "accepted",
+            "latency_ms": latency_ms,
+        },
+    )
     return {
         "status": "accepted",
         "event_id": validated["event_id"],
