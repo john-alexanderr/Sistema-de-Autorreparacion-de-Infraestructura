@@ -1,55 +1,380 @@
-"""Guía ejecutable del integrante 6; sustituir cada pendiente por aserciones reales."""
-import pytest  # Mantiene visibles los casos sin implementar.
+"""Offline worker, durable-ledger, Telegram, and retry scenario tests."""
 
-@pytest.mark.pendiente
-def test_duplicate_is_idempotent():
-    """Comprueba que repetir un evento no repite recursos ni acciones completadas.
+import json
+import logging
 
-    Returns:
-        None cuando dos ejecuciones conservan el estado final esperado.
-    Raises:
-        NotImplementedError: Hasta que I6 implemente la preparación y aserciones.
-    Notes:
-        Usar un cliente falso con contador de llamadas; reinicializar el handler
-        leyendo el mismo ledger para que el ensayo represente un reinicio.
-    """
-    # TODO I6-B: preparar inventario/manifiesto válido en tmp_path y evento fijo.
-    # Ejecutar handler dos veces; verificar IDs y una sola acción efectiva.
-    # Guardar/releer el estado antes de la segunda ejecución; no usar un set en memoria.
-    raise NotImplementedError("I6-B: prueba durable de duplicados")
+import pytest
+import requests
 
-@pytest.mark.pendiente
-def test_ack_is_after_success():
-    """Verifica que un handler fallido jamás confirma la entrega de SQS.
+from fenix.services import notifications, remediation, sqs, worker
+from fenix.utils.errors import PermanentError, RetryableError
+from fenix.utils.state import load, save
 
-    Returns:
-        None si fallo=retry sin ACK y éxito=ACK exactamente al finalizar.
-    Raises:
-        NotImplementedError: Hasta que I6 conecte fixtures y mocks del transporte.
-    Notes:
-        No reemplazar el worker entero por un mock: observar llamadas reales de run.
-    """
-    # TODO I6-C: monkeypatch receive para devolver una entrega con ReceiptHandle fijo.
-    # Reemplazar acknowledge y retry_later por funciones que anoten el orden.
-    # Ejecutar run(once=True) con handler fallido y exigir cero ACK.
-    # Repetir con handler exitoso y exigir handler primero, acknowledge después.
-    raise NotImplementedError("I6-C: probar orden y condición del ACK")
 
-@pytest.mark.integracion
-def test_redrive_with_localstack():
-    """Comprueba DLQ efectiva usando el broker, no una lista simulada en Python.
+def event(**overrides) -> dict:
+    value = {
+        "schema_version": 1,
+        "event_id": "evt-node-001",
+        "event_type": "instance.stopped",
+        "resource_id": "node-01",
+        "occurred_at": "2026-10-22T18:00:00Z",
+        "simulate_failures": 0,
+    }
+    value.update(overrides)
+    return value
 
-    Returns:
-        None si un mensaje venenoso termina en la DLQ y el worker sigue vivo.
-    Raises:
-        NotImplementedError: Hasta implementar el ensayo con espera total acotada.
-    Side Effects:
-        Crea colas de prueba exclusivas y las limpia después de guardar evidencia.
-    Notes:
-        Usar un prefijo de test nuevo y no purgar colas del laboratorio del grupo.
-    """
-    # TODO I6-D: publicar JSON corrupto en una cola con RedrivePolicy real.
-    # Consumir con el worker y consultar DLQ con deadline total de 120 segundos.
-    # Comparar el Body original; un contador aproximado por sí solo no demuestra redrive.
-    # Si se agota el deadline, fallar con diagnóstico; no pasar el test por timeout.
-    raise NotImplementedError("I6-D: verificar redrive real en LocalStack")
+
+def inventory() -> dict:
+    tags = {
+        "ManagedBy": "ppa2",
+        "Project": "fenix",
+        "GroupId": "grupo-01",
+        "Owner": "grupo-01",
+        "Name": "fenix-grupo-01-node",
+    }
+    return {
+        "node-01": {
+            "type": "ec2",
+            "group_id": "grupo-01",
+            "instance_id": "i-test-001",
+            "security_group_id": "sg-test-001",
+            "expected_tags": tags,
+            "status": "ready",
+        }
+    }
+
+
+def configure_ledger(monkeypatch, tmp_path):
+    inventory_path = tmp_path / "inventory.json"
+    events_path = tmp_path / "events.json"
+    save(str(inventory_path), inventory())
+    monkeypatch.setattr(remediation, "INVENTORY_PATH", str(inventory_path))
+    monkeypatch.setattr(remediation, "EVENTS_PATH", str(events_path))
+    return events_path
+
+
+@pytest.mark.base
+def test_simulated_failures_persist_across_attempts_then_complete(monkeypatch, tmp_path):
+    path = configure_ledger(monkeypatch, tmp_path)
+    calls = {"repair": 0, "notify": 0}
+    monkeypatch.setattr(remediation, "repair", lambda *_args: calls.__setitem__("repair", calls["repair"] + 1) or "repaired")
+    monkeypatch.setattr(remediation, "notify", lambda _text: calls.__setitem__("notify", calls["notify"] + 1))
+
+    target = event(simulate_failures=2)
+    for expected_attempt in (1, 2):
+        with pytest.raises(RetryableError):
+            remediation.handle(target)
+        assert load(str(path))[target["event_id"]]["attempts"] == expected_attempt
+    remediation.handle(target)
+
+    record = load(str(path))[target["event_id"]]
+    assert record["attempts"] == 3
+    assert record["repair_done"] is True
+    assert record["notified"] is True
+    assert record["status"] == "complete"
+    assert calls == {"repair": 1, "notify": 1}
+
+
+@pytest.mark.base
+def test_duplicate_after_restart_does_not_repeat_completed_stages(monkeypatch, tmp_path):
+    configure_ledger(monkeypatch, tmp_path)
+    calls = {"repair": 0, "notify": 0}
+    monkeypatch.setattr(remediation, "repair", lambda *_args: calls.__setitem__("repair", calls["repair"] + 1) or "already_ok")
+    monkeypatch.setattr(remediation, "notify", lambda _text: calls.__setitem__("notify", calls["notify"] + 1))
+
+    first_handler = remediation.handle
+    first_handler(event())
+    process_restart_handler = remediation.handle
+    process_restart_handler(event())
+    assert calls == {"repair": 1, "notify": 1}
+
+
+@pytest.mark.base
+def test_restart_after_repair_resumes_notification_only(monkeypatch, tmp_path):
+    path = configure_ledger(monkeypatch, tmp_path)
+    calls = {"repair": 0, "notify": 0}
+
+    def repair_once(*_args):
+        calls["repair"] += 1
+        return "repaired"
+
+    def notification_with_one_failure(_text):
+        calls["notify"] += 1
+        if calls["notify"] == 1:
+            raise RetryableError("temporary notification failure", retry_after=4)
+
+    monkeypatch.setattr(remediation, "repair", repair_once)
+    monkeypatch.setattr(remediation, "notify", notification_with_one_failure)
+    with pytest.raises(RetryableError):
+        remediation.handle(event())
+    between_stages = load(str(path))["evt-node-001"]
+    assert between_stages["repair_done"] is True
+    assert between_stages["notified"] is False
+    remediation.handle(event())
+    assert calls == {"repair": 1, "notify": 2}
+    assert load(str(path))["evt-node-001"]["status"] == "complete"
+
+
+@pytest.mark.base
+def test_conflicting_event_id_preserves_first_content_and_never_repairs_again(monkeypatch, tmp_path):
+    path = configure_ledger(monkeypatch, tmp_path)
+    repaired = []
+    monkeypatch.setattr(remediation, "repair", lambda *_args: repaired.append(True) or "repaired")
+    monkeypatch.setattr(remediation, "notify", lambda _text: None)
+    original = event()
+    remediation.handle(original)
+
+    conflicting = event(occurred_at="2026-10-22T18:01:00Z")
+    with pytest.raises(PermanentError):
+        remediation.handle(conflicting)
+    record = load(str(path))["evt-node-001"]
+    assert record["content"] == original
+    assert record["conflicts"] == [conflicting]
+    assert record["status"] == "conflict"
+    assert repaired == [True]
+
+
+@pytest.mark.base
+def test_worker_acknowledges_only_after_handler_success(monkeypatch):
+    message = {
+        "MessageId": "message-001",
+        "ReceiptHandle": "receipt-current",
+        "Body": json.dumps(event()),
+        "Attributes": {"ApproximateReceiveCount": "1"},
+    }
+    calls = []
+    monkeypatch.setattr(worker, "receive", lambda _url: [message])
+    monkeypatch.setattr(worker, "acknowledge", lambda _url, receipt: calls.append(("ack", receipt)))
+    monkeypatch.setattr(worker, "retry_later", lambda _url, _message: calls.append(("retry", None)) or 2)
+    logger = logging.getLogger("worker-ack-test")
+
+    def failing_handler(_event):
+        calls.append(("handler", None))
+        raise RetryableError("temporary")
+
+    worker.run("queue", failing_handler, logger, once=True)
+    assert calls == [("handler", None), ("retry", None)]
+
+    calls.clear()
+    worker.run("queue", lambda _event: calls.append(("handler", None)), logger, once=True)
+    assert calls == [("handler", None), ("ack", "receipt-current")]
+
+
+@pytest.mark.base
+def test_worker_keeps_running_after_poison_message(monkeypatch):
+    poison = {
+        "MessageId": "message-poison",
+        "ReceiptHandle": "receipt-poison",
+        "Body": "{invalid",
+        "Attributes": {"ApproximateReceiveCount": "1"},
+    }
+    valid = {
+        "MessageId": "message-valid",
+        "ReceiptHandle": "receipt-valid",
+        "Body": json.dumps(event()),
+        "Attributes": {"ApproximateReceiveCount": "1"},
+    }
+    calls = []
+    monkeypatch.setattr(worker, "receive", lambda _url: [poison, valid])
+    monkeypatch.setattr(worker, "retry_later", lambda _url, message: calls.append(("retry", message["ReceiptHandle"])) or 2)
+    monkeypatch.setattr(worker, "acknowledge", lambda _url, receipt: calls.append(("ack", receipt)))
+    worker.run("queue", lambda _event: calls.append(("handler", None)), logging.getLogger("poison-test"), once=True)
+    assert calls == [("retry", "receipt-poison"), ("handler", None), ("ack", "receipt-valid")]
+
+
+@pytest.mark.base
+@pytest.mark.parametrize("count,expected", [("1", 2), ("2", 4), ("3", 8), ("8", 30)])
+def test_retry_later_changes_visibility_on_current_receipt(monkeypatch, count, expected):
+    class FakeSQS:
+        def change_message_visibility(self, **kwargs):
+            self.kwargs = kwargs
+
+    fake = FakeSQS()
+    monkeypatch.setattr(sqs, "client", lambda _service: fake)
+    message = {
+        "ReceiptHandle": "most-recent-receipt",
+        "Attributes": {"ApproximateReceiveCount": count},
+    }
+    assert sqs.retry_later("queue-url", message) == expected
+    assert fake.kwargs["ReceiptHandle"] == "most-recent-receipt"
+    assert fake.kwargs["VisibilityTimeout"] == expected
+
+
+@pytest.mark.base
+def test_retry_after_is_a_minimum_without_inner_retries(monkeypatch):
+    message = {
+        "MessageId": "message-001",
+        "ReceiptHandle": "receipt-current",
+        "Body": json.dumps(event()),
+        "Attributes": {"ApproximateReceiveCount": "1"},
+    }
+    observed = []
+    monkeypatch.setattr(worker, "receive", lambda _url: [message])
+    monkeypatch.setattr(worker, "acknowledge", lambda *_args: observed.append("ack"))
+    monkeypatch.setattr(
+        worker,
+        "retry_later",
+        lambda _url, _message, minimum_delay=None: observed.append(("retry", minimum_delay)) or 4,
+    )
+
+    def fail_with_retry_after(_event):
+        raise RetryableError("rate limited", retry_after=4)
+
+    worker.run("queue", fail_with_retry_after, logging.getLogger("retry-after-test"), once=True)
+    assert observed == [("retry", 4)]
+
+
+@pytest.mark.base
+def test_telegram_adapter_sends_json_and_requires_provider_confirmation(monkeypatch):
+    monkeypatch.setenv("NOTIFY_PROVIDER", "telegram")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456:abcdefghijklmnopqrstuvwxyz")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "-100123456")
+    calls = []
+
+    class Response:
+        status_code = 200
+        headers = {}
+
+        def json(self):
+            return {"ok": True, "result": {"message_id": 1}}
+
+    def send(url, **kwargs):
+        calls.append((url, kwargs))
+        return Response()
+
+    monkeypatch.setattr(notifications.requests, "post", send)
+    notifications.notify("repair complete")
+    url, kwargs = calls[0]
+    assert url.startswith("https://api.telegram.org/bot") and url.endswith("/sendMessage")
+    assert kwargs["json"] == {"chat_id": "-100123456", "text": "repair complete"}
+    assert "parse_mode" not in kwargs["json"]
+    assert kwargs["timeout"] == (2, 5)
+    assert kwargs["allow_redirects"] is False
+
+
+@pytest.mark.base
+@pytest.mark.parametrize("status", [400, 401, 403])
+def test_telegram_client_errors_are_permanent(monkeypatch, status):
+    monkeypatch.setenv("NOTIFY_PROVIDER", "telegram")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456:abcdefghijklmnopqrstuvwxyz")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "-100123456")
+
+    class Response:
+        status_code = status
+        headers = {}
+
+    monkeypatch.setattr(notifications.requests, "post", lambda *_args, **_kwargs: Response())
+    with pytest.raises(PermanentError):
+        notifications.notify("repair complete")
+
+
+@pytest.mark.base
+def test_telegram_5xx_and_connection_failures_are_transient(monkeypatch):
+    monkeypatch.setenv("NOTIFY_PROVIDER", "telegram")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456:abcdefghijklmnopqrstuvwxyz")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "-100123456")
+
+    class Unavailable:
+        status_code = 503
+        headers = {}
+
+    monkeypatch.setattr(notifications.requests, "post", lambda *_args, **_kwargs: Unavailable())
+    with pytest.raises(RetryableError):
+        notifications.notify("repair complete")
+
+    def disconnected(*_args, **_kwargs):
+        raise requests.ConnectionError("connection details must not be logged")
+
+    monkeypatch.setattr(notifications.requests, "post", disconnected)
+    with pytest.raises(RetryableError):
+        notifications.notify("repair complete")
+
+
+@pytest.mark.base
+@pytest.mark.parametrize("header,expected", [("12", 12), ("90", 30)])
+def test_telegram_5xx_retry_after_is_propagated_and_bounded(monkeypatch, header, expected):
+    monkeypatch.setenv("NOTIFY_PROVIDER", "telegram")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456:abcdefghijklmnopqrstuvwxyz")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "-100123456")
+    calls = []
+
+    class Response:
+        status_code = 503
+        headers = {"Retry-After": header}
+
+    def send(*_args, **_kwargs):
+        calls.append(True)
+        return Response()
+
+    monkeypatch.setattr(notifications.requests, "post", send)
+    with pytest.raises(RetryableError) as failure:
+        notifications.notify("repair complete")
+
+    assert failure.value.retry_after == expected
+    assert failure.value.retry_after <= 30
+    assert calls == [True]
+
+
+@pytest.mark.base
+def test_telegram_429_honors_bounded_retry_after_and_timeout_is_transient(monkeypatch):
+    monkeypatch.setenv("NOTIFY_PROVIDER", "telegram")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456:abcdefghijklmnopqrstuvwxyz")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "-100123456")
+
+    class RateLimited:
+        status_code = 429
+        headers = {"Retry-After": "90"}
+
+    monkeypatch.setattr(notifications.requests, "post", lambda *_args, **_kwargs: RateLimited())
+    with pytest.raises(RetryableError) as rate_limit:
+        notifications.notify("repair complete")
+    assert rate_limit.value.retry_after == 30
+
+    def timeout(*_args, **_kwargs):
+        raise requests.Timeout("private URL details are not logged")
+
+    monkeypatch.setattr(notifications.requests, "post", timeout)
+    with pytest.raises(RetryableError):
+        notifications.notify("repair complete")
+
+
+@pytest.mark.base
+def test_f14_rate_limit_and_timeout_resume_notification_without_repair_repeat(monkeypatch, tmp_path):
+    path = configure_ledger(monkeypatch, tmp_path)
+    monkeypatch.setenv("NOTIFY_PROVIDER", "telegram")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456:abcdefghijklmnopqrstuvwxyz")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "-100123456")
+    repairs = []
+    responses = []
+
+    class RateLimited:
+        status_code = 429
+        headers = {"Retry-After": "3"}
+
+    class Accepted:
+        status_code = 200
+        headers = {}
+
+        def json(self):
+            return {"ok": True}
+
+    sequence = [RateLimited(), requests.Timeout("private request details"), Accepted()]
+
+    def send(*_args, **_kwargs):
+        response = sequence.pop(0)
+        responses.append(type(response).__name__)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(remediation, "repair", lambda *_args: repairs.append(True) or "repaired")
+    monkeypatch.setattr(notifications.requests, "post", send)
+    for _ in range(2):
+        with pytest.raises(RetryableError):
+            remediation.handle(event())
+    remediation.handle(event())
+
+    record = load(str(path))["evt-node-001"]
+    assert record["repair_done"] is True and record["notified"] is True
+    assert repairs == [True]
+    assert responses == ["RateLimited", "Timeout", "Accepted"]

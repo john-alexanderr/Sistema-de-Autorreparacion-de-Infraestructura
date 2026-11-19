@@ -1,36 +1,79 @@
-"""Adaptador HTTP guiado. Elegir Telegram O Slack, no ambos obligatoriamente."""
-import os  # Recupera credenciales fuera del repositorio.
-import requests  # Aplica timeout explícito a cada llamada HTTP.
+"""Telegram Bot API adapter; console output is development-only."""
+
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
+import os
+import re
+
+import requests
+
 from fenix.utils.errors import PermanentError, RetryableError
 
 
-def notify(text: str) -> None:
-    """Envía un mensaje breve y valida la respuesta del proveedor seleccionado.
+_TOKEN = re.compile(r"[A-Za-z0-9:_-]{16,256}\Z")
 
-    Args:
-        text: Resumen público de hasta 1000 caracteres, sin secretos ni raw body.
-    Returns:
-        None únicamente después de confirmar éxito del proveedor.
-    Raises:
-        RetryableError: Timeout, conexión, 429 o respuesta 5xx.
-        PermanentError: Configuración inválida, 4xx definitivo o rechazo funcional.
-        NotImplementedError: Mientras falte TODO I4-A.
-    Side Effects:
-        Publica en el chat/canal del grupo. Un timeout puede causar duplicados.
-    Notes:
-        El modo console sirve para desarrollo; no reemplaza la evidencia final real.
-        No registrar la excepción requests original: puede contener el token en URL.
-    """
-    mode = os.getenv("NOTIFY_PROVIDER", "console")  # Selecciona un adaptador explícito.
-    if mode == "console":  # Ensayo local sin credenciales de terceros.
-        print(text[:1000])  # No imprimir eventos completos o URLs privadas.
-        return  # El modo debe figurar en el informe de pruebas.
-    # TODO I4-A Telegram: POST https://api.telegram.org/bot{token}/sendMessage.
-    # Leer TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID desde entorno; payload chat_id/text.
-    # Verificar status HTTP y JSON con ok is True; no basta con un HTTP 200.
-    # TODO I4-A Slack: POST a SLACK_WEBHOOK_URL con json={"text": text[:1000]}.
-    # Verificar status 200 y body.strip() == "ok"; Slack no exige JSON de respuesta.
-    # Usar timeout=(2, 5); capturar Timeout/ConnectionError sin copiar su mensaje.
-    # 429 y 5xx son transitorios; leer Retry-After y documentar demora acotada.
-    # Otros 4xx son permanentes; no reintentar infinitamente credenciales inválidas.
-    raise NotImplementedError("I4-A: implementar proveedor externo elegido")
+
+def _retry_after(value: str | None) -> int | None:
+    if not value:
+        return None
+    try:
+        seconds = int(value)
+    except ValueError:
+        try:
+            target = parsedate_to_datetime(value)
+            if target.tzinfo is None:
+                return None
+            seconds = int((target.astimezone(timezone.utc) - datetime.now(timezone.utc)).total_seconds())
+        except (TypeError, ValueError, OverflowError):
+            return None
+    return min(30, max(0, seconds))
+
+
+def notify(text: str) -> None:
+    """Send one Telegram message and classify the response for SQS retry."""
+    mode = os.getenv("NOTIFY_PROVIDER", "console")
+    message = text[:1000] if isinstance(text, str) else ""
+    if mode == "console":
+        print(message)
+        return
+    if mode != "telegram":
+        raise PermanentError("NOTIFY_PROVIDER must be console or telegram")
+
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+    if not _TOKEN.fullmatch(token) or not chat_id or len(chat_id) > 128:
+        raise PermanentError("Telegram notification configuration is incomplete")
+    endpoint = f"https://api.telegram.org/bot{token}/sendMessage"
+    try:
+        response = requests.post(
+            endpoint,
+            json={"chat_id": chat_id, "text": message},
+            timeout=(2, 5),
+            allow_redirects=False,
+        )
+    except requests.Timeout as error:
+        raise RetryableError("Telegram request timed out") from error
+    except requests.ConnectionError as error:
+        raise RetryableError("Telegram connection failed") from error
+    except requests.RequestException as error:
+        raise PermanentError("Telegram request could not be constructed") from error
+
+    status = response.status_code
+    if status == 429:
+        raise RetryableError(
+            "Telegram rate limit reached",
+            retry_after=_retry_after(response.headers.get("Retry-After")),
+        )
+    if 500 <= status <= 599:
+        raise RetryableError(
+            "Telegram service is temporarily unavailable",
+            retry_after=_retry_after(response.headers.get("Retry-After")),
+        )
+    if not 200 <= status <= 299:
+        raise PermanentError("Telegram rejected the notification request")
+    try:
+        payload = response.json()
+    except ValueError as error:
+        raise PermanentError("Telegram returned an invalid response") from error
+    if not isinstance(payload, dict) or payload.get("ok") is not True:
+        raise PermanentError("Telegram did not confirm the notification")

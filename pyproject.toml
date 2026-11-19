@@ -15,4 +15,4 @@ dependencies = {file = ["requirements.txt"]}
 where = ["src"]
 
 [tool.pytest.ini_options]
-markers = ["base: apoyo ya implementado", "pendiente: contratos que completa el alumnado", "integracion: requiere LocalStack en ejecución"]
+markers = ["base: offline contract and unit tests", "integracion: opt-in LocalStack tests requiring course approval"]

@@ -1,29 +1,21 @@
-"""Excepciones compartidas. Integrante 1 revisa cuándo usar cada tipo."""
+"""Sanitized domain errors shared by the application services."""
+
 
 class ProjectError(Exception):
-    """Error controlado del TP; base para informar y cerrar con código 1.
+    """Base class for expected application failures."""
 
-    Args:
-        message: Descripción pública, sin tokens ni URLs privadas.
-    """
 
 class ValidationError(ProjectError):
-    """Entrada inválida o recurso fuera del inventario autorizado.
+    """Input or inventory data violates an explicit contract."""
 
-    Args:
-        message: Regla incumplida, sin copiar secretos de la entrada.
-    """
 
 class RetryableError(ProjectError):
-    """Fallo transitorio que permite una nueva recepción de SQS.
+    """A transient failure that should leave the SQS message available."""
 
-    Args:
-        message: Descripción del paso pendiente, sin datos sensibles.
-    """
+    def __init__(self, message: str, retry_after: int | None = None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
+
 
 class PermanentError(ProjectError):
-    """Fallo no recuperable que se conserva hasta llegar a la DLQ.
-
-    Args:
-        message: Motivo público del rechazo definitivo del evento.
-    """
+    """A non-retryable domain failure retained until SQS redrives the message."""

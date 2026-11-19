@@ -1,56 +1,47 @@
-"""Contratos de validación a completar por el integrante 1."""
-import re  # Comprueba el formato de los identificadores.
-from datetime import datetime, timezone  # Trabaja con fechas conscientes de UTC.
-from fenix.utils.errors import ValidationError  # Error público del dominio.
+"""Strict validation helpers for the Fénix contracts."""
+
+import re
+from datetime import datetime, timedelta, timezone
+
+from fenix.utils.errors import ValidationError
+
+
+_IDENTIFIER = re.compile(r"[a-z0-9-]{3,32}\Z")
+_DIGITS = re.compile(r"[0-9]+\Z")
+_UTC_TEXT = re.compile(
+    r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:Z|\+00:00)\Z"
+)
 
 
 def identifier(value: str) -> str:
-    """Valida un identificador corto y devuelve su texto sin modificar.
-
-    Args:
-        value: Texto entre 3 y 32 caracteres; letras minúsculas, dígitos o guion.
-    Returns:
-        El identificador original válido.
-    Raises:
-        ValidationError: Si el tipo o el patrón no cumplen el contrato.
-        NotImplementedError: Mientras el alumno no complete TODO I1-A.
-    Examples:
-        identifier("grupo-01") devuelve "grupo-01"; "../ajeno" debe fallar.
-    """
-    # TODO I1-A: usar isinstance y re.fullmatch con r"[a-z0-9-]{3,32}".
-    # No convertir automáticamente a minúsculas: podría cambiar la identidad.
-    raise NotImplementedError("I1-A: validar identifier")  # Quitar al completar.
+    """Return an unchanged identifier matching the project's closed format."""
+    if not isinstance(value, str) or _IDENTIFIER.fullmatch(value) is None:
+        raise ValidationError("Identifier must contain 3-32 lowercase letters, digits, or hyphens")
+    return value
 
 
 def ttl_seconds(value: str) -> int:
-    """Valida el TTL didáctico empleado en la opción de entornos efímeros.
-
-    Args:
-        value: Texto con un entero entre 60 y 600 segundos inclusive.
-    Returns:
-        El número entero de segundos.
-    Raises:
-        ValidationError: Si no es entero o está fuera de los límites.
-        NotImplementedError: Mientras no se complete TODO I1-B.
-    Notes:
-        La CLI traduce ValidationError a parser.error para salir con código 2.
-    """
-    # TODO I1-B: convertir con int y capturar ValueError con encadenamiento.
-    # Comprobar 60 <= ttl <= 600; no aceptar decimales ni valores negativos.
-    raise NotImplementedError("I1-B: validar TTL")  # Sustituir por la validación.
+    """Parse a decimal TTL in the inclusive range 60-600 seconds."""
+    if not isinstance(value, str) or _DIGITS.fullmatch(value) is None:
+        raise ValidationError("TTL must be an integer between 60 and 600 seconds")
+    try:
+        ttl = int(value)
+    except ValueError as error:
+        raise ValidationError("TTL must be an integer between 60 and 600 seconds") from error
+    if not 60 <= ttl <= 600:
+        raise ValidationError("TTL must be an integer between 60 and 600 seconds")
+    return ttl
 
 
 def utc_text(value: str) -> datetime:
-    """Interpreta una fecha UTC explícita sin aceptar fechas ingenuas.
-
-    Args:
-        value: ISO 8601 terminado en Z o con offset +00:00.
-    Returns:
-        Fecha con zona UTC; por ejemplo 2026-10-22T18:00:00+00:00.
-    Raises:
-        ValidationError: Si falta zona, hay offset no nulo o formato inválido.
-        NotImplementedError: Mientras no se complete TODO I1-C.
-    """
-    # TODO I1-C: usar fromisoformat, reemplazando Z por +00:00.
-    # Rechazar tzinfo ausente y utcoffset distinto de timedelta(0).
-    raise NotImplementedError("I1-C: interpretar UTC")  # No usar hora local.
+    """Parse an ISO-8601 timestamp that explicitly represents UTC."""
+    if not isinstance(value, str) or _UTC_TEXT.fullmatch(value) is None:
+        raise ValidationError("Timestamp must be an ISO-8601 UTC string")
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as error:
+        raise ValidationError("Timestamp must be an ISO-8601 UTC string") from error
+    if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
+        raise ValidationError("Timestamp must include a UTC offset")
+    return parsed.astimezone(timezone.utc)

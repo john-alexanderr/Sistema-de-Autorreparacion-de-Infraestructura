@@ -1,47 +1,127 @@
-"""Contratos inicialmente pendientes; el alumno debe hacerlos pasar sin borrarlos."""
-import pytest  # Ejecuta los escenarios parametrizados.
-from fenix.utils.validation import identifier, ttl_seconds, utc_text
+"""Offline unit tests for identifiers, timestamps, and the event contract."""
+
+import pytest
+
+from fenix.services.events import validate
+from fenix.config import settings
 from fenix.utils.errors import ValidationError
+from fenix.utils.validation import identifier, ttl_seconds, utc_text
 
-@pytest.mark.pendiente
-def test_identifier_contract():
-    """Exige conservar un ID válido y rechazar rutas o mayúsculas.
 
-    Returns:
-        None si las validaciones cumplen su contrato.
-    Raises:
-        AssertionError: Si acepta un valor inválido.
-        NotImplementedError: Hasta que se complete I1-A.
-    """
-    assert identifier("grupo-01") == "grupo-01"  # No normaliza identidad.
-    with pytest.raises(ValidationError):  # Bloquea rutas no autorizadas.
-        identifier("../AJENO")  # Entrada maliciosa didáctica.
+def inventory() -> dict:
+    ownership = {
+        "ManagedBy": "ppa2",
+        "Project": "fenix",
+        "GroupId": "grupo-01",
+        "Owner": "grupo-01",
+    }
+    return {
+        "node-01": {
+            "type": "ec2",
+            "group_id": "grupo-01",
+            "instance_id": "i-test-001",
+            "security_group_id": "sg-test-001",
+            "expected_tags": {**ownership, "Name": "fenix-grupo-01-node"},
+            "status": "ready",
+        },
+        "bucket-01": {
+            "type": "s3",
+            "group_id": "grupo-01",
+            "bucket_name": "fenix-grupo-01-demo",
+            "expected_tags": ownership,
+            "status": "ready",
+        },
+    }
 
-@pytest.mark.pendiente
-def test_ttl_contract():
-    """Comprueba límites incluidos y el rechazo de un TTL excesivo.
 
-    Returns:
-        None si TTL queda entre 60 y 600 segundos.
-    Raises:
-        AssertionError: Si acepta un valor fuera de rango.
-        NotImplementedError: Hasta que se complete I1-B.
-    """
-    assert ttl_seconds("60") == 60  # Límite inferior permitido.
-    assert ttl_seconds("600") == 600  # Límite superior permitido.
-    with pytest.raises(ValidationError):  # No se redondean entradas.
-        ttl_seconds("601")  # Supera el presupuesto didáctico.
+def event(**overrides) -> dict:
+    value = {
+        "schema_version": 1,
+        "event_id": "evt-node-001",
+        "event_type": "instance.stopped",
+        "resource_id": "node-01",
+        "occurred_at": "2026-10-22T18:00:00Z",
+        "simulate_failures": 0,
+    }
+    value.update(overrides)
+    return value
 
-@pytest.mark.pendiente
-def test_utc_contract():
-    """Exige que las fechas de expiración tengan UTC explícito.
 
-    Returns:
-        None si se acepta Z y se rechaza una fecha sin zona.
-    Raises:
-        AssertionError: Si una fecha ingenua resulta válida.
-        NotImplementedError: Hasta que se complete I1-C.
-    """
+@pytest.mark.base
+def test_identifier_requires_the_exact_closed_format():
+    assert identifier("grupo-01") == "grupo-01"
+    for value in ("../group", "Grupo-01", "ab", "a" * 33, 123):
+        with pytest.raises(ValidationError):
+            identifier(value)
+
+
+@pytest.mark.base
+def test_ttl_is_decimal_and_bounded():
+    assert ttl_seconds("60") == 60
+    assert ttl_seconds("600") == 600
+    for value in ("59", "601", "1.5", " 60", "+60", "true", 60):
+        with pytest.raises(ValidationError):
+            ttl_seconds(value)
+
+
+@pytest.mark.base
+def test_timestamp_requires_explicit_utc():
     assert utc_text("2026-10-22T18:00:00Z").utcoffset().total_seconds() == 0
-    with pytest.raises(ValidationError):  # Sin zona no hay comparación segura.
-        utc_text("2026-10-22T18:00:00")  # Evita depender del reloj local.
+    assert utc_text("2026-10-22T18:00:00+00:00").isoformat().endswith("+00:00")
+    for value in (
+        "2026-10-22T18:00:00",
+        "2026-10-22T18:00:00+01:00",
+        "2026-10-22T18:00:00-00:00",
+        "2026-10-22 18:00:00Z",
+        None,
+    ):
+        with pytest.raises(ValidationError):
+            utc_text(value)
+
+
+@pytest.mark.base
+def test_event_contract_rejects_extra_fields_and_boolean_integers():
+    allowed = inventory()
+    assert validate(event(), allowed)["event_id"] == "evt-node-001"
+    for invalid in (
+        event(simulate_failures=True),
+        event(schema_version=True),
+        event(resource_id="i-123456"),
+        event(extra="not allowed"),
+        event(event_type="bucket.tags_missing", resource_id="node-01"),
+    ):
+        with pytest.raises(ValidationError):
+            validate(invalid, allowed)
+
+
+@pytest.mark.base
+def test_event_contract_requires_ready_owned_inventory_alias():
+    allowed = inventory()
+    allowed["node-01"]["status"] = "provisioning"
+    with pytest.raises(ValidationError):
+        validate(event(), allowed)
+    allowed["node-01"]["status"] = "ready"
+    allowed["node-01"]["expected_tags"]["GroupId"] = "other-group"
+    with pytest.raises(ValidationError):
+        validate(event(), allowed)
+
+
+@pytest.mark.base
+def test_cloud_client_fails_closed_and_uses_dummy_local_credentials(monkeypatch):
+    monkeypatch.setenv("AWS_ENDPOINT_URL", "http://127.0.0.1:4566")
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+    calls = []
+    monkeypatch.setattr(settings.boto3, "client", lambda *args, **kwargs: calls.append((args, kwargs)) or "client")
+    assert settings.client("sqs") == "client"
+    assert calls[0][1]["aws_access_key_id"] == "test"
+    assert calls[0][1]["aws_secret_access_key"] == "test"
+
+    for endpoint in (
+        "https://127.0.0.1:4566",
+        "http://example.com:4566",
+        "http://localhost:4567",
+        "http://localhost:4566/path",
+    ):
+        monkeypatch.setenv("AWS_ENDPOINT_URL", endpoint)
+        with pytest.raises(ValidationError):
+            settings.client("sqs")

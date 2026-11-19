@@ -1,45 +1,54 @@
-"""Configuración de apoyo entregada; no guarda credenciales en el código."""
-import os  # Lee variables de entorno del proceso.
-from urllib.parse import urlparse  # Separa host, puerto y esquema.
-import boto3  # Crea clientes oficiales de AWS.
-from botocore.config import Config  # Limita esperas y reintentos del SDK.
-from dotenv import load_dotenv  # Carga el archivo local ignorado por Git.
-from fenix.utils.errors import ValidationError  # Expresa errores de configuración.
+"""Fail-closed configuration for the local LocalStack endpoint."""
+
+import os
+from urllib.parse import urlparse
+
+import boto3
+from botocore.config import Config
+from dotenv import load_dotenv
+
+from fenix.utils.errors import ValidationError
 
 
 def client(service: str):
-    """Construye un cliente dirigido exclusivamente al emulador local.
+    """Build a Boto3 client restricted to loopback port 4566.
 
-    Args:
-        service: Nombre del servicio; sqs, s3 o ec2.
-    Returns:
-        Cliente Boto3 del servicio solicitado.
-    Raises:
-        ValidationError: Si falta una variable o el destino no es loopback.
-        BotoCoreError: Si Boto3 no puede construir el cliente.
-    Notes:
-        Python corre en el host. No se usan perfiles ni credenciales de AWS real.
-        El tiempo de lectura supera el long polling de diez segundos.
+    Python runs on the host, so the application does not use container service
+    names, AWS profiles, or credentials from a real AWS account.
     """
-    load_dotenv()  # No sobrescribe las variables ya exportadas.
-    endpoint = os.environ.get("AWS_ENDPOINT_URL", "")  # Exige destino explícito.
-    try:  # urlparse también puede rechazar puertos o corchetes malformados.
-        parsed = urlparse(endpoint)  # Descompone la URL antes de aceptarla.
-        port = parsed.port  # La propiedad port puede lanzar ValueError.
-    except ValueError as error:  # Traduce el fallo a la excepción pública del dominio.
-        raise ValidationError("Endpoint local inválido") from error
-    if (parsed.scheme != "http" or parsed.hostname not in ("localhost", "127.0.0.1")
-            or port != 4566 or parsed.username or parsed.password):
-        raise ValidationError("Usar http://localhost:4566 en este TP")  # Falla cerrado.
-    for key in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"):
-        if not os.environ.get(key):  # No permite fallback a un perfil del equipo.
-            raise ValidationError(f"Falta variable {key}")  # Indica solo el nombre.
-    return boto3.client(  # Todas las llamadas pasan por el mismo guardián.
-        service, endpoint_url=endpoint,
-        region_name=os.environ["AWS_DEFAULT_REGION"],
-        aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-        config=Config(connect_timeout=2, read_timeout=15,
-                      retries={"mode": "standard", "total_max_attempts": 2},
-                      s3={"addressing_style": "path"}),
-    )  # Los reintentos SDK son distintos de las recepciones SQS.
+    load_dotenv()
+    endpoint = os.environ.get("AWS_ENDPOINT_URL", "")
+    try:
+        parsed = urlparse(endpoint)
+        port = parsed.port
+    except ValueError as error:
+        raise ValidationError("Invalid local AWS endpoint") from error
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname not in ("localhost", "127.0.0.1")
+        or port != 4566
+        or parsed.username
+        or parsed.password
+        or parsed.path not in ("", "/")
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValidationError("AWS_ENDPOINT_URL must target loopback port 4566")
+    if service not in {"sqs", "s3", "ec2"}:
+        raise ValidationError("Unsupported local AWS service")
+    region = os.environ.get("AWS_DEFAULT_REGION")
+    if not region:
+        raise ValidationError("Missing AWS_DEFAULT_REGION")
+    return boto3.client(
+        service,
+        endpoint_url=endpoint,
+        region_name=region,
+        aws_access_key_id="test",
+        aws_secret_access_key="test",
+        config=Config(
+            connect_timeout=2,
+            read_timeout=15,
+            retries={"mode": "standard", "total_max_attempts": 2},
+            s3={"addressing_style": "path"},
+        ),
+    )

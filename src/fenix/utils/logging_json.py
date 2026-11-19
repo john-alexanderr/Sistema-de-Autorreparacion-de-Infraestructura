@@ -1,90 +1,115 @@
-"""Apoyo reutilizable de Tritón y Vulcano; integrante 4 debe verificarlo."""
-import gzip  # Comprime los históricos rotados.
-import json  # Emite una estructura por línea.
-import logging  # Usa la biblioteca estándar de observabilidad.
+"""Structured JSON logging with bounded rotating files and gzip archives."""
+import gzip
+import json
+import logging
 from logging.handlers import QueueHandler, QueueListener, RotatingFileHandler
-import queue  # Desacopla productores y escritura en un hilo del mismo proceso.
-import shutil  # Copia el archivo al compresor.
-import os  # Elimina el archivo original después de comprimirlo.
-from datetime import datetime, timezone  # Emite marcas UTC.
-from pathlib import Path  # Crea la carpeta de logs.
+import os
+import queue
+import re
+import shutil
+from datetime import datetime, timezone
+from pathlib import Path
+
+_SIGNATURE = re.compile(r"t=[0-9]+,v1=[0-9a-fA-F]{64}")
+_HEX_DIGEST = re.compile(r"(?<![0-9a-fA-F])[0-9a-fA-F]{64}(?![0-9a-fA-F])")
+_URL = re.compile(r"https?://[^\s\"']+")
+
+
+def _safe_message(message: str) -> str:
+    message = _URL.sub("[REDACTED_URL]", message)
+    message = _SIGNATURE.sub("[REDACTED_SIGNATURE]", message)
+    return _HEX_DIGEST.sub("[REDACTED_SIGNATURE]", message)
 
 class JSONFormatter(logging.Formatter):
-    """Serializa campos permitidos; no copia indiscriminadamente record.__dict__.
+    """Serialize only approved fields instead of copying the whole log record.
 
     Notes:
-        Cada proceso usa su propio archivo para evitar rotaciones concurrentes.
+        Each process writes to its own file to avoid concurrent rotation.
     """
     def format(self, record: logging.LogRecord) -> str:
-        """Convierte un registro en JSON compatible con json.loads.
+        """Format a record as one JSON line with a UTC timestamp.
 
         Args:
-            record: Registro del logger con extras públicos opcionales.
+            record: Log record with optional public context fields.
         Returns:
-            Una línea JSON con fecha UTC, nivel, evento y contexto autorizado.
+            A JSON line containing the timestamp, level, message, and safe context.
         Raises:
-            TypeError: Si un extra no es serializable; usar escalares públicos.
+            TypeError: If an approved context value is not JSON serializable.
         """
         data = {"timestamp": datetime.fromtimestamp(record.created, timezone.utc).isoformat(),
-                "level": record.levelname, "message": record.getMessage(),
-                "process": record.process, "thread": record.threadName}  # Campos base.
+                "level": record.levelname, "message": _safe_message(record.getMessage()),
+                "process": record.process, "thread": record.threadName}
         for name in ("event_id", "message_id", "resource_id", "attempt", "action", "status"):
-            data[name] = getattr(record, name, None)  # Lista cerrada de extras.
-        return json.dumps(data, ensure_ascii=False)  # El mensaje no contiene secretos.
+            data[name] = getattr(record, name, None)
+        return json.dumps(data, ensure_ascii=False)
 
 
 def gzip_name(name: str) -> str:
-    """Calcula el nombre comprimido de un histórico.
+    """Return a gzip archive name for a rotated log file.
 
     Args:
-        name: Nombre propuesto por RotatingFileHandler.
+        name: Archive name proposed by RotatingFileHandler.
     Returns:
-        El mismo nombre con sufijo .gz.
+        The proposed name with a .gz suffix.
     """
-    return name + ".gz"  # Permite rotaciones y backups automáticos.
+    return name + ".gz"
 
 
 def gzip_rotate(source: str, dest: str) -> None:
-    """Comprime y luego elimina el histórico original.
+    """Compress a closed archive and remove its uncompressed source.
 
     Args:
-        source: Archivo cerrado por el manejador.
-        dest: Ruta del archivo comprimido.
+        source: Archive file closed by the rotating handler.
+        dest: Destination path for the gzip archive.
     Returns:
         None.
     Raises:
-        OSError: Si falla la lectura, compresión o eliminación.
+        OSError: If reading, compression, or source removal fails.
     Notes:
-        Esta versión didáctica no promete publicación atómica del gzip.
+        Gzip publication is not atomic in this implementation.
     """
     with open(source, "rb") as origin, gzip.open(dest, "wb") as target:
-        shutil.copyfileobj(origin, target)  # Procesa el contenido sin leerlo entero.
-    os.remove(source)  # Solo se borra después del cierre exitoso del gzip.
+        shutil.copyfileobj(origin, target)
+    os.remove(source)
 
 
-def setup(name: str) -> tuple[logging.Logger, QueueListener]:
-    """Inicia el pipeline JSON en un archivo exclusivo de este proceso.
+def setup(
+    name: str,
+    max_bytes: int = 2 * 1024 * 1024,
+    backup_count: int = 3,
+) -> tuple[logging.Logger, QueueListener]:
+    """Start a JSON logging pipeline backed by a process-specific file.
 
     Args:
-        name: Nombre público del componente, por ejemplo fenix-worker.
+        name: Public component name, such as fenix-worker.
+        max_bytes: Rotation threshold; configurable for deterministic tests.
+        backup_count: Number of compressed archives to retain.
     Returns:
-        Logger y listener; el llamador debe ejecutar listener.stop en finally.
+        Logger and listener; the caller must execute listener.stop in cleanup.
     Raises:
-        OSError: Si no se puede crear logs/ o abrir el archivo.
+        OSError: If the logs directory or file cannot be created.
     Side Effects:
-        Inicia un hilo y abre un manejador rotativo; llamar una vez por proceso.
+        Starts a listener thread and opens a rotating file handler; call once per process.
     """
-    Path("logs").mkdir(exist_ok=True)  # Prepara una ruta local ignorada por Git.
-    sink = RotatingFileHandler(f"logs/{name}-{os.getpid()}.jsonl", maxBytes=2*1024*1024,
-                               backupCount=3, encoding="utf-8")  # Limita crecimiento.
-    sink.setFormatter(JSONFormatter())  # Toda línea mantiene el mismo contrato.
-    sink.namer, sink.rotator = gzip_name, gzip_rotate  # Asocia callbacks.
-    records = queue.Queue()  # Esta cola en memoria NO sustituye a SQS.
-    logger = logging.getLogger(name)  # Mantiene un nombre por componente.
-    logger.setLevel(logging.DEBUG)  # Permite demostrar los cinco niveles.
-    logger.handlers.clear()  # Evita duplicados si se reinicializa por una prueba.
-    logger.propagate = False  # No replica mensajes en el logger raíz.
-    logger.addHandler(QueueHandler(records))  # El productor no escribe en disco.
-    listener = QueueListener(records, sink)  # Solo este hilo escribe el archivo.
-    listener.start()  # Empieza el consumo de registros.
-    return logger, listener  # El cierre pertenece al llamador.
+    if type(max_bytes) is not int or max_bytes < 1:
+        raise ValueError("max_bytes must be a positive integer")
+    if type(backup_count) is not int or backup_count < 0:
+        raise ValueError("backup_count must be a non-negative integer")
+    Path("logs").mkdir(exist_ok=True)
+    sink = RotatingFileHandler(
+        f"logs/{name}-{os.getpid()}.jsonl",
+        maxBytes=max_bytes,
+        backupCount=backup_count,
+        encoding="utf-8",
+    )
+    sink.setFormatter(JSONFormatter())
+    sink.namer, sink.rotator = gzip_name, gzip_rotate
+    records = queue.Queue()
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    logger.handlers.clear()
+    logger.propagate = False
+    logger.addHandler(QueueHandler(records))
+    listener = QueueListener(records, sink)
+    listener.start()
+    return logger, listener

@@ -1,75 +1,85 @@
-"""CLI de apoyo. Los comandos existen; dependen de completar los TODO del equipo."""
-import argparse  # Proporciona subcomandos reproducibles.
-import json  # Lee archivos de eventos de prueba.
-import os  # Recupera configuración del entorno.
-import time  # Obtiene epoch del emisor.
-import sys  # Comunica un código de salida al sistema operativo.
-from pathlib import Path  # Lee archivos locales elegidos por el operador.
-import requests  # Envía un webhook de prueba con bytes firmados.
-from dotenv import load_dotenv  # Prepara el entorno de todos los comandos.
+"""Command-line lifecycle for Fénix setup, fault injection, sending, and work."""
+
+import argparse
+import json
+import os
+from pathlib import Path
+import requests
+import sys
+import time
+
 from botocore.exceptions import BotoCoreError, ClientError
-from fenix.utils.logging_json import setup
+from dotenv import load_dotenv
+
+from fenix.services import demo, remediation, sqs, worker
 from fenix.utils.crypto import signature
 from fenix.utils.errors import ProjectError
-from fenix.services import sqs, demo, worker, remediation
+from fenix.utils.logging_json import setup
 
 
 def main() -> int:
-    """Ejecuta un subcomando y cierra el logging antes de devolver el resultado.
-
-    Returns:
-        0 éxito o interrupción voluntaria; 1 error registrado; argparse usa 2.
-    Raises:
-        SystemExit: argparse muestra ayuda o rechaza argumentos.
-    Side Effects:
-        Ejecuta la operación elegida; nunca confirma mensajes desde finally.
-    Notes:
-        Durante desarrollo, NotImplementedError se informa como plantilla pendiente.
-    """
-    load_dotenv()  # No se lee ninguna credencial desde argumentos CLI.
-    parser = argparse.ArgumentParser(description="Fénix autorreparación local")
-    sub = parser.add_subparsers(dest="command", required=True)  # Un comando por vez.
-    sub.add_parser("init-queues")  # Prepara work y DLQ.
-    sub.add_parser("setup-demo")  # Crea el laboratorio autorizado.
-    fault = sub.add_parser("fault")  # Introduce una falla controlada.
-    fault.add_argument("alias", choices=["node-01", "bucket-01"])  # Sin IDs arbitrarios.
-    send = sub.add_parser("send")  # Emite el evento por HTTP.
-    send.add_argument("file")  # Archivo JSON visible para la defensa.
-    consume = sub.add_parser("worker")  # Procesa la cola local.
-    consume.add_argument("--once", action="store_true")  # Una consulta para pruebas.
-    args = parser.parse_args()  # Errores sintácticos salen con código 2.
-    logger, listener = setup("fenix-" + args.command)  # Archivo por proceso.
-    code = 0  # El resultado se devuelve fuera de finally.
-    try:  # Una frontera de entrada controla errores de las dependencias.
-        prefix = os.environ["QUEUE_PREFIX"]  # Exige un prefijo explícito.
-        if args.command == "init-queues":  # Crea primero la DLQ.
-            print(sqs.ensure_queues(prefix))  # Las URLs provienen del SDK.
-        elif args.command == "setup-demo":  # Crea o recupera recursos.
-            print(demo.setup_demo(os.environ["GROUP_ID"]))  # Sin secretos.
-        elif args.command == "fault":  # Perturba solo el inventario del grupo.
-            demo.inject_fault(args.alias)  # I6 implementa la inyección.
-        elif args.command == "send":  # Firma exactamente lo que envía.
-            body = Path(args.file).read_bytes()  # No reserializa después de firmar.
-            json.loads(body)  # Rechaza archivos no JSON antes de enviar.
-            timestamp = int(time.time())  # La firma autentica también este número.
+    """Run one CLI command and always stop the process-local log listener."""
+    load_dotenv()
+    parser = argparse.ArgumentParser(description="Fénix infrastructure self-repair lab")
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("init-queues")
+    sub.add_parser("setup-demo")
+    fault = sub.add_parser("fault")
+    fault.add_argument("alias", choices=["node-01", "bucket-01"])
+    send = sub.add_parser("send")
+    send.add_argument("file")
+    consume = sub.add_parser("worker")
+    consume.add_argument("--once", action="store_true")
+    args = parser.parse_args()
+    logger, listener = setup("fenix-" + args.command)
+    code = 0
+    try:
+        prefix = os.environ.get("QUEUE_PREFIX", "")
+        if args.command == "init-queues":
+            print(sqs.ensure_queues(prefix))
+        elif args.command == "setup-demo":
+            print(demo.setup_demo(os.environ["GROUP_ID"]))
+        elif args.command == "fault":
+            demo.inject_fault(args.alias)
+        elif args.command == "send":
+            body = Path(args.file).read_bytes()
+            json.loads(body)
+            timestamp = int(time.time())
             digest = signature(os.environ["WEBHOOK_SECRET"], timestamp, body)
-            response = requests.post("http://127.0.0.1:8000/webhook", data=body,
-                headers={"Content-Type": "application/json",
-                         "X-Webhook-Signature": f"t={timestamp},v1={digest}"}, timeout=(2, 15))
-            response.raise_for_status()  # No mostrar éxito ante 4xx o 5xx.
-            print(response.status_code, response.text)  # Respuesta pública del receptor.
-        elif args.command == "worker":  # Consume un mensaje por consulta.
+            response = requests.post(
+                "http://127.0.0.1:8000/webhook",
+                data=body,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Webhook-Signature": f"t={timestamp},v1={digest}",
+                },
+                timeout=(2, 15),
+            )
+            response.raise_for_status()
+            print(response.status_code, response.text)
+        elif args.command == "worker":
             worker.run(sqs.queue_url(prefix), remediation.handle, logger, args.once)
-    except KeyboardInterrupt:  # Detención manual esperada.
-        logger.info("detenido_por_operador")  # No se captura BaseException.
-    except (ProjectError, BotoCoreError, ClientError, OSError, ValueError, KeyError,
-            requests.RequestException, NotImplementedError) as error:
-        logger.error("fallo_controlado", extra={"status": type(error).__name__})
-        print("Revisar configuración o TODO pendiente:", type(error).__name__)  # Sin URL/token.
-        code = 1  # Un fallo no se presenta como ejecución exitosa.
-    finally:  # Se libera el pipeline tanto en éxito como en error.
-        listener.stop()  # No return, break ni continue dentro de finally.
-    return code  # El código de salida refleja el resultado de la ejecución.
+    except KeyboardInterrupt:
+        logger.info("operator_stop", extra={"action": "shutdown", "status": "interrupted"})
+    except (
+        ProjectError,
+        BotoCoreError,
+        ClientError,
+        OSError,
+        ValueError,
+        KeyError,
+        requests.RequestException,
+    ) as error:
+        logger.error(
+            "controlled_failure",
+            extra={"action": args.command, "status": type(error).__name__},
+        )
+        print("Check configuration and local service status:", type(error).__name__)
+        code = 1
+    finally:
+        listener.stop()
+    return code
 
-if __name__ == "__main__":  # Permite python -m fenix.cli.
-    sys.exit(main())  # Hace visible el resultado a la terminal.
+
+if __name__ == "__main__":
+    sys.exit(main())
