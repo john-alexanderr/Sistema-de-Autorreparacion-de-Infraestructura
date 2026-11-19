@@ -4,40 +4,40 @@ Fénix receives authenticated infrastructure events, validates them against a gr
 
 ## Team and course responsibilities
 
-The course approved a two-person team-size exception. It did not waive any role, evidence, review, or defense requirement. Names, email addresses, exact course role titles, and assignments remain pending; copy the official role names from the course guide rather than inventing them here.
+The course approved a two-person team-size exception. It did not waive any role, evidence, review, or defense requirement. Team member names, email addresses, and responsible-person assignments remain pending; the exception did not define how the six roles are allocated.
 
 | Team member | Email | Status |
 |---|---|---|
 | `[Pending: member 1 name]` | `[Pending: member 1 email]` | Not assigned in this repository |
 | `[Pending: member 2 name]` | `[Pending: member 2 email]` | Not assigned in this repository |
 
-| Required course role | Responsible person | Required role evidence / defense artifact |
+| Required course role | Module focus and evidence summary | Responsible person |
 |---|---|---|
-| `[Pending: official role 1 title]` | `[Pending assignment]` | `[Pending: evidence and defense reference]` |
-| `[Pending: official role 2 title]` | `[Pending assignment]` | `[Pending: evidence and defense reference]` |
-| `[Pending: official role 3 title]` | `[Pending assignment]` | `[Pending: evidence and defense reference]` |
-| `[Pending: official role 4 title]` | `[Pending assignment]` | `[Pending: evidence and defense reference]` |
-| `[Pending: official role 5 title]` | `[Pending assignment]` | `[Pending: evidence and defense reference]` |
-| `[Pending: official role 6 title]` | `[Pending assignment]` | `[Pending: evidence and defense reference]` |
+| I1 Entradas y Excepciones | `receiver.py`, `events.py`, validation, and signature handling; signed-input rejection and HTTP error evidence (F04–F07, F13). | `[Pending assignment]` |
+| I2 Mensajería e Inventario Cloud | `sqs.py`, `demo.py`, and settings; queue/DLQ behavior, group-owned inventory, and reconciliation evidence (F01, F08, F10). | `[Pending assignment]` |
+| I3 Webhooks y Reparación | Webhook acceptance and verified EC2/S3 remediation in `receiver.py` and `remediation.py` (F02–F07). | `[Pending assignment]` |
+| I4 Observabilidad y Comunicación | Telegram delivery/retry evidence and redacted rotating logs in `notifications.py` and `logging_json.py` (F02, F14, F16). | `[Pending assignment]` |
+| I5 Integración y Worker | Durable processing, visibility retries, recovery, and acknowledgment in `worker.py`, `state.py`, and `sqs.py` (F08–F12). | `[Pending assignment]` |
+| I6 Pruebas y Diagnóstico | Test reports and diagnostic evidence mapped to the verification matrix (F01–F16), distinguishing offline results from pending integrations. | `[Pending assignment]` |
 
 ## Prerequisites
 
-- Python 3.11 or newer (`pyproject.toml` declares `requires-python = ">=3.11"`).
+- Python 3.12.3 is the selected project team target and is verified in this checkout's `.venv`. The second team member must use Python 3.12.3 too; their environment has not yet been verified. `pyproject.toml` keeps `requires-python = ">=3.11"` because the course permits newer versions and the metadata retains a compatibility floor rather than pinning the team target.
 - Docker Desktop with its WSL2 engine, Docker Compose, and the course-approved LocalStack image and authorization configuration.
 - A Telegram bot and chat configured by the team outside source control. Never paste credentials into issues, chat, screenshots, or this README.
 - The approved course guide and resource naming rules.
 
-The repository does not pin dependency versions. `requirements-lock.txt` remains pending until both team members agree on one Python version. The verification environment used Python 3.12.3 in `.venv`. Do not use an unapproved LocalStack image or copy a sample authorization token into a shared artifact. The AWS SDK client rejects endpoints other than loopback port 4566 and always uses dummy local credentials.
+`requirements.txt` declares the direct dependencies; `requirements-lock.txt` records the package versions installed in the verified Python 3.12.3 `.venv`, including a portable editable-project entry (`-e .`). The lockfile does not use a machine-specific path. Both team members must use the selected Python version; confirm the second member's interpreter before treating the team environment as aligned. Do not use an unapproved LocalStack image or copy a sample authorization token into a shared artifact. The AWS SDK client rejects endpoints other than loopback port 4566 and always uses dummy local credentials.
 
 ## Install from a clean checkout
 
 1. Create and activate a virtual environment:
 
    ```bash
-   python3 -m venv .venv
+   python3.12 -m venv .venv
    source .venv/bin/activate
-   python -m pip install --upgrade pip
-   python -m pip install -e .
+   python --version  # Must report Python 3.12.3
+   python -m pip install -r requirements-lock.txt
    ```
 
 2. Create the ignored local environment file and enter only cátedra-approved local settings:
@@ -147,20 +147,22 @@ The console notification adapter is development-only. Final course evidence requ
 
 ### Verified snapshot
 
-- Environment: Python 3.12.3 in `.venv`.
-- Offline command: `./.venv/bin/python -m pytest -m "not integracion" -q` — **43 passed, 6 `integracion` tests deselected**.
+- Environment: Python 3.12.3 in `.venv`; selected and verified project team target. The second member's environment remains to be confirmed.
+- Offline command: `./.venv/bin/python -m pytest -m "not integracion" -q` — **53 passed, 6 `integracion` tests deselected**.
 - `git diff --check` passed; `pip check` reported no broken requirements.
 - A scan found no Python `TODO` or `NotImplementedError` placeholders.
 - No LocalStack, AWS, or real Telegram calls were made.
 
-The 43 passing tests include the parameterized Telegram 5xx `Retry-After` regression test. F01, F02, F03, F08, F10, and the LocalStack portion of F13 remain pending course-approved integration. LocalStack scenarios also require the opt-in variables documented below.
+The 53 passing tests include repository compliance guards, CLI boundary/raw-byte tests, queued-log flush coverage, the parameterized Telegram 5xx `Retry-After` regression test, and a crash-window case where a repair succeeds but saving its ledger checkpoint fails; the retry re-queries the resource and converges without repeating the EC2 start effect. F01, F02, F03, F08, F10, and the LocalStack portion of F13 remain pending course-approved integration. LocalStack scenarios also require the opt-in variables documented below.
+
+`tests/test_compliance.py` checks the assignment's prohibited exception/finally patterns; `tests/test_cli.py` checks early argument rejection, exact signed-file bytes, and listener cleanup; `tests/test_logging.py` verifies queued records flush on listener stop. The opt-in F01 integration test also checks that the work queue targets the configured DLQ, uses `maxReceiveCount=3`, and that the DLQ has no nested redrive policy; that integration test was not run.
 
 | ID | Expected behavior | Observed status | Evidence | Responsible |
 |---|---|---|---|---|
-| F01 | Repeated queue and demo setup reuses exactly one group-owned set of resources. | Integration evidence pending; not run. | `[Pending: command output and resource evidence]` | `[Pending assignment]` |
+| F01 | Repeated setup reuses one group-owned resource set; the work queue redrives to its DLQ after three receives, and the DLQ has no nested redrive policy. | Integration evidence pending; not run. | `[Pending: command output and resource evidence]` | `[Pending assignment]` |
 | F02 | Verified EC2 start, durable ledger, Telegram adapter success, and SQS ACK. | Integration evidence pending; not run. Adapter transport is mocked in the integration test; real Telegram evidence remains pending. | `[Pending: redacted Telegram confirmation and ACK evidence]` | `[Pending assignment]` |
 | F03 | Restore the missing `Owner` tag and preserve unrelated bucket tags. | Integration evidence pending; not run. | `[Pending: before/after tag evidence]` | `[Pending assignment]` |
-| F04 | Missing, malformed, stale, or invalid signatures return 401 and do not publish. | Offline coverage passed in the 43-test run (`test_signature_failures_return_401_without_publishing`). | `[Pending: attach test report]` | `[Pending assignment]` |
+| F04 | Missing, malformed, stale, or invalid signatures return 401 and do not publish. | Offline coverage passed in the 53-test run (`test_signature_failures_return_401_without_publishing`). | `[Pending: attach test report]` | `[Pending assignment]` |
 | F05 | The same JSON reserialized to different bytes after signing returns 401 and is not published; the signature covers the raw body bytes. | Offline coverage passed (`test_signature_authenticates_raw_bytes_and_rejects_ambiguous_headers`). | `[Pending: attach test report]` | `[Pending assignment]` |
 | F06 | Signed malformed JSON returns 400; signed non-object JSON returns 422. | Offline coverage passed (`test_signed_invalid_json_is_400_and_signed_list_is_422`). | `[Pending: attach test report]` | `[Pending assignment]` |
 | F07 | Invalid alias or extra fields are rejected without a cloud change. | Offline receiver coverage passed (`test_bad_alias_and_extra_event_fields_return_422_without_publish`). | `[Pending: attach test report and resource-state evidence]` | `[Pending assignment]` |
@@ -168,7 +170,7 @@ The 43 passing tests include the parameterized Telegram 5xx `Retry-After` regres
 | F09 | Two persisted simulated failures use backoff; the next event execution can complete. | Offline coverage passed (`test_simulated_failures_persist_across_attempts_then_complete`, `test_retry_later_changes_visibility_on_current_receipt`). | `[Pending: attach test report and ledger excerpt]` | `[Pending assignment]` |
 | F10 | `simulate_failures=5` reaches the real DLQ without repair or ACK. | Pending course-approved LocalStack integration; not run. | `[Pending: receive count, ledger, and DLQ evidence]` | `[Pending assignment]` |
 | F11 | Duplicate delivery or worker restart does not repeat durably completed repair/notification stages. | Offline coverage passed (`test_duplicate_after_restart_does_not_repeat_completed_stages`). | `[Pending: attach test report and ledger excerpt]` | `[Pending assignment]` |
-| F12 | Restart after repair but before notification resumes notification only. | Offline coverage passed (`test_restart_after_repair_resumes_notification_only`). | `[Pending: attach test report and ledger excerpt]` | `[Pending assignment]` |
+| F12 | Restart after repair but before notification resumes notification only. | Offline coverage passed (`test_restart_after_repair_resumes_notification_only`); an additional crash-window test confirms convergence if the ledger checkpoint write fails after the external repair. | `[Pending: attach test report and ledger excerpt]` | `[Pending assignment]` |
 | F13 | SQS unavailable returns 503 and never reports false acceptance. | Offline mocked 503 coverage passed (`test_sqs_failure_returns_503_without_false_acceptance`); LocalStack integration remains pending course approval. | `[Pending: attach test report and LocalStack HTTP evidence]` | `[Pending assignment]` |
 | F14 | Mocked Telegram 429/timeout and 5xx Retry-After are retried without repeating confirmed repair. | Offline coverage passed, including `test_f14_rate_limit_and_timeout_resume_notification_without_repair_repeat` and `test_telegram_5xx_retry_after_is_propagated_and_bounded`. | `[Pending: attach test report]` | `[Pending assignment]` |
 | F15 | Conflicting content for one event ID preserves the first ledger entry and does not repair again. | Offline coverage passed (`test_conflicting_event_id_preserves_first_content_and_never_repairs_again`). | `[Pending: attach test report and conflict ledger excerpt]` | `[Pending assignment]` |
@@ -186,11 +188,11 @@ To opt in to the integration tests, first obtain the course's approval and prepa
 
 ## Required defense artifacts
 
-- Team roles, names, emails, and per-role evidence: `[Pending: fill from the approved course guide]`.
+- Team member names, emails, responsible-person assignments, and completed role evidence: `[Pending: fill from the approved course guide and attach evidence]`.
 - Telegram evidence: `[Pending: attach redacted Bot API success evidence; never include the bot token or private chat credentials]`.
 - Video: `[Pending: link]`.
 - Video timestamps: `[Pending: timestamp — topic]`.
 
 ## AI assistance declaration
 
-AI assistance was used to implement the validation, queue, LocalStack lab, webhook, remediation, Telegram, worker, ledger, offline/integration test scaffolding, and README changes. The Python 3.12.3 `.venv` offline run passed 43 tests with 6 integration tests deselected, including the 5xx `Retry-After` regression test; `git diff --check` and `pip check` also passed, and no Python TODO or NotImplementedError placeholders remain. No LocalStack, AWS, or real Telegram calls occurred. Course-approved integration evidence, final evidence artifacts, human review, role assignments, real Telegram confirmation, and video materials remain pending. The team must review and understand all changes before submission.
+AI assistance was used to implement the validation, queue, LocalStack lab, webhook, remediation, Telegram, worker, ledger, and test/documentation changes. The Python 3.12.3 `.venv` offline run passed 53 tests with 6 integration tests deselected, including the compliance, CLI, logging lifecycle, 5xx `Retry-After`, and repair-checkpoint crash-window tests; `git diff --check` and `pip check` also passed, and no Python TODO or NotImplementedError placeholders remain. No LocalStack, AWS, or real Telegram calls occurred. Course-approved integration evidence, final evidence artifacts, human review, role assignments, real Telegram confirmation, and video materials remain pending. The team must review and understand all changes before submission.

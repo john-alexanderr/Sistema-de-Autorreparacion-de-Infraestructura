@@ -159,8 +159,15 @@ def test_f01_queue_and_demo_setup_are_idempotent(local_lab):
         QueueUrl=first_urls[0],
         AttributeNames=["VisibilityTimeout", "RedrivePolicy"],
     )["Attributes"]
+    dead_attributes = client("sqs").get_queue_attributes(
+        QueueUrl=first_urls[1],
+        AttributeNames=["QueueArn", "RedrivePolicy"],
+    )["Attributes"]
+    redrive_policy = json.loads(work_attributes["RedrivePolicy"])
     assert work_attributes["VisibilityTimeout"] == "45"
-    assert json.loads(work_attributes["RedrivePolicy"])["maxReceiveCount"] == "3"
+    assert redrive_policy["deadLetterTargetArn"] == dead_attributes["QueueArn"]
+    assert redrive_policy["maxReceiveCount"] == "3"
+    assert "RedrivePolicy" not in dead_attributes
 
 
 @pytest.mark.integracion

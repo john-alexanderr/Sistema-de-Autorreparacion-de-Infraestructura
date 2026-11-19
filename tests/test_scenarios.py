@@ -116,6 +116,72 @@ def test_restart_after_repair_resumes_notification_only(monkeypatch, tmp_path):
 
 
 @pytest.mark.base
+def test_repair_converges_when_ledger_checkpoint_save_fails(monkeypatch, tmp_path):
+    path = configure_ledger(monkeypatch, tmp_path)
+    instance = {"state": "stopped", "start_calls": 0}
+    notifications_sent = []
+
+    class FakeEC2:
+        def describe_instances(self, **_kwargs):
+            tags = inventory()["node-01"]["expected_tags"]
+            return {
+                "Reservations": [
+                    {
+                        "Instances": [
+                            {
+                                "InstanceId": "i-test-001",
+                                "State": {"Name": instance["state"]},
+                                "Tags": [
+                                    {"Key": key, "Value": value}
+                                    for key, value in tags.items()
+                                ],
+                            }
+                        ]
+                    }
+                ]
+            }
+
+        def start_instances(self, **_kwargs):
+            instance["start_calls"] += 1
+            instance["state"] = "running"
+            return {}
+
+    ec2 = FakeEC2()
+    monkeypatch.setattr(remediation, "client", lambda _service: ec2)
+    monkeypatch.setattr(remediation, "notify", notifications_sent.append)
+
+    original_save = remediation.save
+    checkpoint_failure = {"raised": False}
+
+    def fail_repair_checkpoint_once(file_path, state):
+        entry = state.get("evt-node-001") if isinstance(state, dict) else None
+        if entry and entry.get("repair_done") is True and not checkpoint_failure["raised"]:
+            checkpoint_failure["raised"] = True
+            raise OSError("simulated ledger checkpoint failure")
+        original_save(file_path, state)
+
+    monkeypatch.setattr(remediation, "save", fail_repair_checkpoint_once)
+
+    with pytest.raises(OSError, match="simulated ledger checkpoint failure"):
+        remediation.handle(event())
+
+    assert instance["state"] == "running"
+    assert instance["start_calls"] == 1
+    assert load(str(path))["evt-node-001"]["repair_done"] is False
+    assert notifications_sent == []
+
+    remediation.handle(event())
+
+    final = load(str(path))["evt-node-001"]
+    assert instance["start_calls"] == 1
+    assert final["repair_done"] is True
+    assert final["repair_result"] == "already_ok"
+    assert final["notified"] is True
+    assert final["status"] == "complete"
+    assert len(notifications_sent) == 1
+
+
+@pytest.mark.base
 def test_conflicting_event_id_preserves_first_content_and_never_repairs_again(monkeypatch, tmp_path):
     path = configure_ledger(monkeypatch, tmp_path)
     repaired = []

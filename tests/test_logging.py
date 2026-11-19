@@ -2,6 +2,7 @@
 
 import gzip
 import json
+from threading import Event, Thread
 
 import pytest
 
@@ -40,3 +41,51 @@ def test_small_threshold_rotates_to_readable_gzip_json_without_secrets(tmp_path,
     assert private_url not in serialized
     assert "private-token" not in serialized
     assert "a" * 64 not in serialized
+
+
+@pytest.mark.base
+def test_listener_stop_flushes_records_waiting_in_the_queue(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    logger, listener = setup("listener-stop-test")
+    sink = listener.handlers[0]
+    emit_started = Event()
+    release_emit = Event()
+    sentinel_enqueued = Event()
+    original_emit = sink.emit
+    original_enqueue_sentinel = listener.enqueue_sentinel
+
+    def blocked_emit(record):
+        emit_started.set()
+        assert release_emit.wait(timeout=5)
+        original_emit(record)
+
+    def observe_sentinel_enqueue():
+        original_enqueue_sentinel()
+        sentinel_enqueued.set()
+
+    monkeypatch.setattr(sink, "emit", blocked_emit)
+    monkeypatch.setattr(listener, "enqueue_sentinel", observe_sentinel_enqueue)
+    messages = [f"queued record {index}" for index in range(12)]
+    stop_thread = None
+    try:
+        logger.info(messages[0])
+        assert emit_started.wait(timeout=5)
+        for message in messages[1:]:
+            logger.info(message)
+
+        stop_thread = Thread(target=listener.stop)
+        stop_thread.start()
+        assert sentinel_enqueued.wait(timeout=5)
+        release_emit.set()
+        stop_thread.join(timeout=5)
+        assert not stop_thread.is_alive()
+    finally:
+        release_emit.set()
+        if stop_thread is None:
+            listener.stop()
+        else:
+            stop_thread.join(timeout=5)
+
+    log_file = next((tmp_path / "logs").glob("listener-stop-test-*.jsonl"))
+    rows = [json.loads(line) for line in log_file.read_text(encoding="utf-8").splitlines()]
+    assert [row["message"] for row in rows] == messages
