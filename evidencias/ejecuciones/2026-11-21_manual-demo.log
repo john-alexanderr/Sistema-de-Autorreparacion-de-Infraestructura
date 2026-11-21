@@ -1,0 +1,27 @@
+# Fénix manual CLI demo
+Sat Nov 21 04:53:58 UTC 2026
+--- fault <RESOURCE_ID>
+--- send examples/node-event.json
+202 {"status":"accepted","event_id":"<RESOURCE_ID>","message_id":"<RESOURCE_ID>"}
+--- worker --once
+Fenix event <RESOURCE_ID>: instance.stopped on <RESOURCE_ID> (repaired)
+--- ledger
+<RESOURCE_ID> {'status': 'complete', 'attempts': 1, 'repair_done': True, 'notified': True}
+--- inspect_resources
+Inventory: data/inventory.json
+Group: <TAG_VALUE>
+
+S3 buckets:
+  - <RESOURCE_ID>: exists=True in_inventory=True ownership_ok=True tags={'GroupId': '<TAG_VALUE>', 'ManagedBy': '<TAG_VALUE>', 'Owner': '<TAG_VALUE>', 'Project': '<TAG_VALUE>'}
+
+EC2 instances:
+  - <RESOURCE_ID>: state=running type=t3.micro private_ip=<PRIVATE_IP> in_inventory=True ownership_ok=True security_groups=['<RESOURCE_ID>'] tags={'ManagedBy': '<TAG_VALUE>', 'Project': '<TAG_VALUE>', 'GroupId': '<TAG_VALUE>', 'Owner': '<TAG_VALUE>', 'Name': '<TAG_VALUE>'}
+
+Security groups:
+  - <RESOURCE_ID> (<RESOURCE_ID>): vpc=<RESOURCE_ID> ownership_ok=True tags={'GroupId': '<TAG_VALUE>', 'ManagedBy': '<TAG_VALUE>', 'Name': '<TAG_VALUE>', 'Owner': '<TAG_VALUE>', 'Project': '<TAG_VALUE>'}
+
+Summary:
+  EC2: owned=1 foreign=0 missing=0
+  S3: owned=1 foreign=0 missing=0
+Inventory aliases: <RESOURCE_ID>, <RESOURCE_ID>
+  Verdict: OK

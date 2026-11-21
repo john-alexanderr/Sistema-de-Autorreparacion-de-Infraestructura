@@ -1,0 +1,2 @@
+version: 2026.10.0
+{'sqs': 'running', 's3': 'running', 'ec2': 'running'}

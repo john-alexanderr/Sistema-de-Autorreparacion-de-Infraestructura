@@ -1,0 +1,24 @@
+Fenix final verification summary
+Date: 2026-11-21
+Scope: current checkout
+
+Source-path assertion: PASS — imports resolve from source files in the current checkout.
+
+Offline suite
+Command: ./.venv/bin/python -m pytest -m "not integracion" -q
+Result: 77 passed, 6 deselected in 1.30s.
+
+Opt-in LocalStack integration suite (separate invocation)
+Command: ./.venv/bin/python -m pytest -m "integracion" -q --tb=short
+Context: approved LocalStack image version 2026.10.0; per-process course opt-in enabled. Endpoint and configuration values omitted.
+Result: 6 passed, 77 deselected in 46.60s.
+
+Dependency check
+Command: ./.venv/bin/python -m pip check
+Result: No broken requirements found.
+
+Whitespace check
+Command: git diff --check
+Result: passed.
+
+The offline and LocalStack suites were separate invocations. No AWS or live Telegram calls were made. F02 used a mocked Telegram transport.

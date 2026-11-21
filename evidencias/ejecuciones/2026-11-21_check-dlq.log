@@ -1,0 +1,22 @@
+Work queue: <RESOURCE_ID>
+  URL: <QUEUE_URL>
+  ARN: <RESOURCE_ID>
+  Counts (approximate): visible=0 not_visible=0 delayed=0
+  VisibilityTimeout: 45
+  MessageRetentionPeriod: 345600
+  RedrivePolicy present: True
+  maxReceiveCount: 3
+  maxReceiveCount is 3: True
+  deadLetterTargetArn: <RESOURCE_ID>
+  targets DLQ: True
+
+DLQ: <RESOURCE_ID>
+  URL: <QUEUE_URL>
+  ARN: <RESOURCE_ID>
+  Counts (approximate): visible=0 not_visible=0 delayed=0
+  VisibilityTimeout: 30
+  MessageRetentionPeriod: 1209600
+  Has RedrivePolicy: False
+
+Verdict: True
+Note: SQS counts are approximate and may lag behind the actual queue state.

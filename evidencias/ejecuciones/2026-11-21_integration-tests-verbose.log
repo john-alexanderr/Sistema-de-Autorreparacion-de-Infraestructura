@@ -1,0 +1,16 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- <REDACTED_PATH>
+cachedir: .pytest_cache
+rootdir: <REDACTED_PATH>
+configfile: pyproject.toml
+plugins: anyio-4.16.0
+collecting ... collected 78 items / 72 deselected / 6 selected
+
+tests/test_localstack_integration.py::test_f01_queue_and_demo_setup_are_idempotent PASSED [ 16%]
+tests/test_localstack_integration.py::test_f02_verified_ec2_repair_durable_ledger_mocked_telegram_and_real_ack PASSED [ 33%]
+tests/test_localstack_integration.py::test_f03_bucket_repair_preserves_unrelated_tags PASSED [ 50%]
+tests/test_localstack_integration.py::test_f08_corrupt_direct_sqs_message_reaches_real_dlq_without_stopping_worker PASSED [ 66%]
+tests/test_localstack_integration.py::test_f10_persistent_handler_failure_reaches_real_dlq_without_ack PASSED [ 83%]
+tests/test_localstack_integration.py::test_f13_missing_local_queue_returns_503_without_acceptance PASSED [100%]
+
+====================== 6 passed, 72 deselected in 58.30s =======================

@@ -68,7 +68,10 @@ The course approved a two-person team-size exception. It did not waive any role,
    python -m fenix.cli worker
    ```
 
-The LocalStack launch and all cloud-facing commands above are instructions for an approved lab session. They were not run during the reported verification.
+These commands describe the manual setup workflow. The latest opt-in pytest
+integration run did call the approved local LocalStack endpoint; the setup
+commands above are not themselves evidence of that run. No AWS or live Telegram
+calls occurred.
 
 ## Event flow
 
@@ -123,6 +126,10 @@ The body is limited to 16 KiB and is a closed JSON object with exactly these fie
 ## Resource inventory
 
 `data/inventory.json` is keyed by the event aliases. Each resource stores its cloud identifier under the single canonical `id` key; webhook events continue to contain only `node-01` or `bucket-01` in `resource_id`.
+
+The inventory below is a synthetic documentation example only. Its aliases,
+group and tag values, and cloud identifiers are illustrative—not actual account
+or resource values.
 
 ```json
 {
@@ -241,46 +248,58 @@ The console notification adapter is development-only. Final course evidence requ
 
 ## Verification matrix
 
-The offline snapshot below was rerun after the worker and provisioning changes in this task. It records only offline checks; LocalStack and live-service evidence remain pending. No integration evidence row is promoted by this change.
+The current snapshot records separate offline and opt-in LocalStack invocations.
+The offline suite passed 77 tests, and the opt-in LocalStack suite passed all
+six integration scenarios. No AWS or live Telegram calls occurred. See the
+[final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log)
+for sanitized commands and results.
 
 ### Verified snapshot
 
 - Environment: Python 3.12.3 in `.venv`; selected and verified project team target. The second member's environment remains to be confirmed.
-- Offline command: `./.venv/bin/python -m pytest -m "not integracion" -q` — **68 passed, 6 `integracion` tests deselected**.
-- `git diff --check` passed; `pip check` reported no broken requirements.
+- Offline command: `./.venv/bin/python -m pytest -m "not integracion" -q` — **77 passed, 6 `integracion` tests deselected in 1.30s**.
+- Opt-in LocalStack command: `./.venv/bin/python -m pytest -m "integracion" -q --tb=short` — **6 passed, 77 deselected in 46.60s**. This was a separate invocation using the approved LocalStack setup and per-process course opt-in.
+- `./.venv/bin/python -m pip check` reported `No broken requirements found.`; `git diff --check` passed.
+- The local import-source assertion passed for the current checkout.
+- No AWS or live Telegram calls occurred; F02 used a mocked Telegram transport.
 - A scan found no Python `TODO` or `NotImplementedError` placeholders.
-- No LocalStack, AWS, or real Telegram calls were made.
 
-The 68 passing tests include repository compliance guards, explicit local-credential configuration checks, CLI boundary/raw-byte tests, queued-log flush coverage, Telegram retry handling, crash-window recovery, worker ACK/visibility `ClientError` handling, setup inventory checkpoints, reset reconciliation, and rejection of non-dummy AWS credentials. F01, F02, F03, F08, F10, and the LocalStack portion of F13 remain pending course-approved integration. LocalStack scenarios also require the opt-in variables documented below.
+The 77 passing offline tests include repository compliance guards, explicit
+local-credential configuration checks, CLI boundary/raw-byte tests, queued-log
+flush coverage, Telegram retry handling, crash-window recovery, worker
+ACK/visibility `ClientError` handling, setup inventory checkpoints, reset
+reconciliation, and rejection of non-dummy AWS credentials. The opt-in
+LocalStack suite passed F01, F02, F03, F08, F10, and the LocalStack portion of
+F13. Real Telegram, individual role, and course-defense evidence remain pending.
 
-`tests/test_compliance.py` checks the assignment's prohibited exception/finally patterns; `tests/test_cli.py` checks early argument rejection, exact signed-file bytes, and listener cleanup; `tests/test_logging.py` verifies queued records flush on listener stop. The opt-in F01 integration test also checks that the work queue targets the configured DLQ, uses `maxReceiveCount=3`, and that the DLQ has no nested redrive policy; that integration test was not run.
+`tests/test_compliance.py` checks the assignment's prohibited exception/finally patterns; `tests/test_cli.py` checks early argument rejection, exact signed-file bytes, and listener cleanup; `tests/test_logging.py` verifies queued records flush on listener stop. The opt-in F01 integration test checks that the work queue targets the configured DLQ, uses `maxReceiveCount=3`, and that the DLQ has no nested redrive policy; it passed in the latest integration run.
 
 | ID | Date | Command / pytest test | Anonymized input | Expected | Observed | Evidence | Responsible |
 |---|---|---|---|---|---|---|---|
-| F01 | Pending | `test_localstack_integration.py::test_f01_queue_and_demo_setup_are_idempotent` | Unique `it-*` group; run queue/demo setup twice. | One owned resource set; work queue targets the DLQ; `maxReceiveCount=3`; no nested DLQ redrive policy. | Not run; course-approved LocalStack configuration pending. | `[Pending: command output, inventory, and queue attributes]` | `[Pending assignment]` |
-| F02 | Pending | `test_localstack_integration.py::test_f02_verified_ec2_repair_durable_ledger_mocked_telegram_and_real_ack` | Synthetic `evt-node-001` for alias `node-01`. | EC2 `running` verified; ledger complete; mocked Telegram success; current SQS receipt acknowledged. | Not run; integration pending. Real Telegram evidence also pending. | `[Pending: ledger, state, ACK and redacted Telegram evidence]` | `[Pending assignment]` |
-| F03 | Pending | `test_localstack_integration.py::test_f03_bucket_repair_preserves_unrelated_tags` | Synthetic `bucket-01` with missing `Owner` and an unrelated tag. | Restore required tags and preserve unrelated tags. | Not run; course-approved LocalStack configuration pending. | `[Pending: before/after tag evidence]` | `[Pending assignment]` |
+| F01 | 2026-11-21 | `test_localstack_integration.py::test_f01_queue_and_demo_setup_are_idempotent` | Unique `it-*` group; run queue/demo setup twice. | One owned resource set; work queue targets the DLQ; `maxReceiveCount=3`; no nested DLQ redrive policy. | PASS: repeated setup reused the same resources; queue redrive verified. | [Final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending assignment]` |
+| F02 | 2026-11-21 | `test_localstack_integration.py::test_f02_verified_ec2_repair_durable_ledger_mocked_telegram_and_real_ack` | Synthetic `evt-node-001` for alias `node-01`. | EC2 `running` verified; ledger complete; mocked Telegram success; current SQS receipt acknowledged. | PASS: EC2 running, ledger complete, mocked Telegram success, and current SQS receipt acknowledged. Real Telegram evidence remains pending. | [Final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending assignment]` |
+| F03 | 2026-11-21 | `test_localstack_integration.py::test_f03_bucket_repair_preserves_unrelated_tags` | Synthetic `bucket-01` with missing `Owner` and an unrelated tag. | Restore required tags and preserve unrelated tags. | PASS: required `Owner` restored; unrelated `Department` tag preserved. | [Final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending assignment]` |
 | F04 | 2026-11-19 | `test_fenix.py::test_signature_failures_return_401_without_publishing` | Synthetic body with missing, malformed, stale, or invalid signature. | HTTP 401 and no SQS publish. | PASS in offline suite. | `[Attach sanitized pytest output]` | `[Pending assignment]` |
 | F05 | 2026-11-19 | `test_fenix.py::test_signature_authenticates_raw_bytes_and_rejects_ambiguous_headers` | Same JSON value serialized to different raw bytes after signing. | HMAC fails; HTTP 401 and no publish. | PASS in offline suite. | `[Attach sanitized pytest output]` | `[Pending assignment]` |
 | F06 | 2026-11-19 | `test_fenix.py::test_signed_invalid_json_is_400_and_signed_list_is_422` | Signed malformed JSON and signed JSON array. | HTTP 400 and 422 respectively; no publish. | PASS in offline suite. | `[Attach sanitized pytest output]` | `[Pending assignment]` |
 | F07 | 2026-11-19 | `test_fenix.py::test_bad_alias_and_extra_event_fields_return_422_without_publish` | Synthetic unknown alias and event with an extra key. | HTTP 422; no cloud operation. | PASS in offline suite. | `[Attach sanitized pytest output]` | `[Pending assignment]` |
-| F08 | Pending | `test_localstack_integration.py::test_f08_corrupt_direct_sqs_message_reaches_real_dlq_without_stopping_worker` | Corrupt synthetic message published directly to the work queue. | Worker continues; original message reaches the real DLQ. | Not run; course-approved LocalStack configuration pending. | `[Pending: original body and DLQ evidence]` | `[Pending assignment]` |
+| F08 | 2026-11-21 | `test_localstack_integration.py::test_f08_corrupt_direct_sqs_message_reaches_real_dlq_without_stopping_worker` | Corrupt synthetic message published directly to the work queue. | Worker continues; original message reaches the real DLQ. | PASS: corrupt body reached the real DLQ; worker continued. | [Final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending assignment]` |
 | F09 | 2026-11-19 | `test_scenarios.py::test_simulated_failures_persist_across_attempts_then_complete` | Synthetic event with `simulate_failures=2`. | Persist attempts; visibility backoff; complete on the third execution. | PASS in offline suite; real SQS timing remains unverified. | `[Attach sanitized pytest output and ledger excerpt]` | `[Pending assignment]` |
-| F10 | Pending | `test_localstack_integration.py::test_f10_persistent_handler_failure_reaches_real_dlq_without_ack` | Synthetic event with `simulate_failures=5`. | No repair or ACK; SQS moves the message to the real DLQ. | Not run; course-approved LocalStack configuration pending. | `[Pending: receive count, ledger, and DLQ evidence]` | `[Pending assignment]` |
+| F10 | 2026-11-21 | `test_localstack_integration.py::test_f10_persistent_handler_failure_reaches_real_dlq_without_ack` | Synthetic event with `simulate_failures=5`. | No repair or ACK; SQS moves the message to the real DLQ. | PASS: persistent failure reached the real DLQ without ACK or repair. | [Final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending assignment]` |
 | F11 | 2026-11-19 | `test_scenarios.py::test_duplicate_after_restart_does_not_repeat_completed_stages` | Repeat a completed synthetic event after reloading its ledger. | No repeated repair or notification. | PASS in offline suite. | `[Attach sanitized pytest output and ledger excerpt]` | `[Pending assignment]` |
 | F12 | 2026-11-19 | `test_scenarios.py::test_restart_after_repair_resumes_notification_only`; `test_repair_converges_when_ledger_checkpoint_save_fails` | Synthetic repair followed by notification/checkpoint failure. | Resume notification only; if the repair checkpoint fails, re-query and converge without repeating EC2 start. | PASS in offline suite. | `[Attach sanitized pytest output and ledger excerpt]` | `[Pending assignment]` |
-| F13 | 2026-11-19 | `test_fenix.py::test_sqs_failure_returns_503_without_false_acceptance`; LocalStack test remains pending. | Valid synthetic event with a mocked unavailable queue. | HTTP 503; no false acceptance. | Offline mocked test PASS; real LocalStack outage test not run. | `[Attach sanitized pytest output; LocalStack evidence pending]` | `[Pending assignment]` |
+| F13 | 2026-11-21 | `test_localstack_integration.py::test_f13_missing_local_queue_returns_503_without_acceptance`; `test_fenix.py::test_sqs_failure_returns_503_without_false_acceptance` | Valid synthetic event with a missing local queue and a mocked unavailable queue. | HTTP 503; no false acceptance. | PASS: LocalStack missing-queue and offline mocked failure both returned 503 without acceptance. | [Final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending assignment]` |
 | F14 | 2026-11-19 | `test_scenarios.py::test_f14_rate_limit_and_timeout_resume_notification_without_repair_repeat`; `test_telegram_5xx_retry_after_is_propagated_and_bounded` | Mocked Telegram 429, timeout, and 5xx with `Retry-After`. | Retry notification only; bounded wait; do not repeat confirmed repair. | PASS in offline suite; real Telegram evidence pending. | `[Attach sanitized pytest output]` | `[Pending assignment]` |
 | F15 | 2026-11-19 | `test_scenarios.py::test_conflicting_event_id_preserves_first_content_and_never_repairs_again` | Same synthetic event ID with different content. | Preserve original ledger; record conflict; do not repair conflicting event. | PASS in offline suite. | `[Attach sanitized pytest output and conflict ledger excerpt]` | `[Pending assignment]` |
 | F16 | 2026-11-19 | `test_logging.py::test_small_threshold_rotates_to_readable_gzip_json_without_secrets` | Synthetic JSON log messages with small rotation threshold. | Readable gzip JSONL, UTC context, redacted secrets. | PASS in offline suite. | `[Attach sanitized pytest output and redacted log excerpts]` | `[Pending assignment]` |
 
-To opt in to the integration tests, first obtain the course's approval and prepare the approved local emulator configuration, then set `FENIX_CATEDRA_APPROVED` and `FENIX_RUN_LOCALSTACK` in the test environment. The tests create unique `it-...` group resources and clean up only resources whose ownership tags match that generated group. They do not send real Telegram messages.
+To opt in to the integration tests, first obtain the course's approval and prepare the approved local emulator configuration, then set `FENIX_CATEDRA_APPROVED` and `FENIX_RUN_LOCALSTACK` in the test environment. The latest opt-in run passed all six integration scenarios. The tests create unique `it-...` group resources and clean up only resources whose ownership tags match that generated group. They do not send real Telegram messages.
 
 ## Limitations and cleanup
 
 - The ledger uses atomic file replacement, not a multi-service transaction, process lock, or exactly-once protocol. Run one worker process per project data directory.
 - Cloud remediation and queue behavior are constrained to loopback port 4566. No AWS account endpoint or credentials are supported.
-- Resource reconciliation depends on LocalStack EC2 mock image/VPC support and the course-approved emulator version. That support has not been exercised in this implementation task.
+- Resource reconciliation depends on LocalStack EC2 mock image/VPC support and the course-approved emulator version; the approved local integration scenarios passed, but this does not verify behavior against real cloud services.
 - Telegram delivery is not transactional with the ledger; an uncertain HTTP result can produce a duplicate notice.
 - The application has no resource-destruction CLI. Stop the approved local lab with `docker compose down` after saving required evidence. Do not use cleanup commands against another group's endpoint or inventory.
 
@@ -293,4 +312,14 @@ To opt in to the integration tests, first obtain the course's approval and prepa
 
 ## AI assistance declaration
 
-AI assistance was used to implement the validation, queue, LocalStack lab, webhook, remediation, Telegram, worker, ledger, and test/documentation changes. The Python 3.12.3 `.venv` offline run passed 68 tests with 6 integration tests deselected, including the inventory-ID contract, environment credential checks, observed latency, worker error handling, ACK status, provisioning checkpoints, reset recovery, compliance, CLI, logging lifecycle, Telegram retries, and crash-window recovery; `git diff --check` and `pip check` also passed, and no Python TODO or NotImplementedError placeholders remain. No LocalStack, AWS, or real Telegram calls occurred. Course-approved integration evidence, final evidence artifacts, human review, role assignments, real Telegram confirmation, and video materials remain pending. The team must review and understand all changes before submission.
+AI assistance was used to implement the validation, queue, LocalStack lab,
+webhook, remediation, Telegram, worker, ledger, and test/documentation changes.
+The local import-source assertion passed for the current checkout. The Python
+3.12.3 `.venv` offline run passed 77 tests with 6 integration tests deselected;
+a separate opt-in LocalStack invocation passed all 6 integration scenarios
+with 77 tests deselected. `pip check` and `git diff --check` also passed, and no
+Python TODO or NotImplementedError placeholders remain. No AWS or live Telegram
+calls occurred; F02 used a mocked Telegram transport. Real Telegram
+confirmation, course-defense artifacts, individual role evidence,
+responsible-person assignments, and video materials remain pending. The team
+must review and understand all changes before submission.
