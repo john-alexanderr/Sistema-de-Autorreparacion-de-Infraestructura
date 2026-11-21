@@ -27,7 +27,7 @@ The course approved a two-person team-size exception. It did not waive any role,
 - A Telegram bot and chat configured by the team outside source control. Never paste credentials into issues, chat, screenshots, or this README.
 - The approved course guide and resource naming rules.
 
-`requirements.txt` declares the direct dependencies; `requirements-lock.txt` records the package versions installed in the verified Python 3.12.3 `.venv`, including a portable editable-project entry (`-e .`). The lockfile does not use a machine-specific path. Both team members must use the selected Python version; confirm the second member's interpreter before treating the team environment as aligned. Do not use an unapproved LocalStack image or copy a sample authorization token into a shared artifact. The AWS SDK client rejects endpoints other than loopback port 4566 and always uses dummy local credentials.
+`requirements.txt` declares the direct dependencies; `requirements-lock.txt` records the package versions installed in the verified Python 3.12.3 `.venv`, including a portable editable-project entry (`-e .`). The lockfile does not use a machine-specific path. Both team members must use the selected Python version; confirm the second member's interpreter before treating the team environment as aligned. Do not use an unapproved LocalStack image or copy a sample authorization token into a shared artifact. The AWS SDK client rejects endpoints other than loopback port 4566 and requires dummy LocalStack credentials supplied through the environment.
 
 ## Install from a clean checkout
 
@@ -46,7 +46,7 @@ The course approved a two-person team-size exception. It did not waive any role,
    cp .env.example .env
    ```
 
-   Required or supported variable names are `AWS_ENDPOINT_URL`, `AWS_DEFAULT_REGION`, `GROUP_ID`, `QUEUE_PREFIX`, `WEBHOOK_SECRET`, `NOTIFY_PROVIDER`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `LOCALSTACK_IMAGE`, and `LOCALSTACK_AUTH_TOKEN`. `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not used by the application client; the application supplies dummy values itself. No values are documented here.
+   Required or supported variable names are `AWS_ENDPOINT_URL`, `AWS_DEFAULT_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `GROUP_ID`, `QUEUE_PREFIX`, `WEBHOOK_SECRET`, `NOTIFY_PROVIDER`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `LOCALSTACK_IMAGE`, and `LOCALSTACK_AUTH_TOKEN`. Set both `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to exactly `test`; other values are rejected. Never use real AWS credentials; the client passes these values explicitly to Boto3 and does not use AWS profiles or credential chains. No values are documented here.
 
 3. After the course-approved image and token have been confirmed, start the local emulator:
 
@@ -155,7 +155,62 @@ The body is limited to 16 KiB and is a closed JSON object with exactly these fie
 }
 ```
 
-The setup command may also store metadata such as `group_id`, `status`, and the EC2 `image_id`. The receiver resolves the alias against this inventory and does not accept a cloud identifier in the webhook.
+The setup command may also store provisioning metadata such as `group_id`, `status`, the EC2 `image_id` and `client_token`, and `security_group_expected_tags`. The receiver resolves the alias against this inventory and does not accept a cloud identifier in the webhook.
+
+## Single-writer and LocalStack recovery
+
+Run only one process that writes to a given `data/` directory. State files are atomically replaced, but the project does not provide cross-process locking or transactions. Stop the worker before running a CLI operation or making a manual edit that changes a manifest. Never delete `data/` while resources owned by its inventory still exist; the inventory is the ownership record needed for safe reconciliation.
+
+After an approved LocalStack reset, treat every previously saved cloud ID as stale:
+
+1. Stop the Fénix worker and any other process that can write to `data/`. Keep `data/` intact.
+2. Reset and restart only the course-approved LocalStack environment, following the cátedra procedure. Do not use real AWS credentials or delete the Fénix inventory as a reset shortcut.
+3. Reconcile with `python -m fenix.cli setup-demo`. Setup re-queries the security group and instance by group ownership tags and, when available, the prior EC2 `ClientToken` (including the stable legacy token); it does not use a saved instance or security-group ID as proof of ownership. If the old mock image is no longer available, setup selects a currently available mock image and does not reuse an idempotency token with changed launch parameters. The selected image and token are saved before launch, and the returned canonical instance ID is saved before the later verification call. Existing resources are adopted only after their ownership tags are verified.
+4. Verify the reconciled inventory against Boto3 before starting the worker:
+
+   ```bash
+   python - <<'PY'
+   from fenix.config.settings import client
+   from fenix.utils.state import load
+
+   inventory = load("data/inventory.json")
+   node = inventory["node-01"]
+   bucket = inventory["bucket-01"]
+   assert node["status"] == bucket["status"] == "ready"
+
+   ec2 = client("ec2")
+   response = ec2.describe_instances(InstanceIds=[node["id"]])
+   instances = [
+       instance
+       for reservation in response.get("Reservations", [])
+       for instance in reservation.get("Instances", [])
+   ]
+   assert len(instances) == 1 and instances[0]["InstanceId"] == node["id"]
+   instance_tags = {tag["Key"]: tag["Value"] for tag in instances[0].get("Tags", [])}
+   assert all(instance_tags.get(key) == value for key, value in node["expected_tags"].items())
+   assert node["security_group_id"] in {
+       group["GroupId"] for group in instances[0].get("SecurityGroups", [])
+   }
+
+   group = ec2.describe_security_groups(GroupIds=[node["security_group_id"]])["SecurityGroups"]
+   assert len(group) == 1
+   group_tags = {tag["Key"]: tag["Value"] for tag in group[0].get("Tags", [])}
+   assert all(
+       group_tags.get(key) == value
+       for key, value in node["security_group_expected_tags"].items()
+   )
+
+   s3 = client("s3")
+   bucket_tags = {
+       tag["Key"]: tag["Value"]
+       for tag in s3.get_bucket_tagging(Bucket=bucket["id"]).get("TagSet", [])
+   }
+   assert all(bucket_tags.get(key) == value for key, value in bucket["expected_tags"].items())
+   print("Boto3 ownership and inventory verification passed")
+   PY
+   ```
+
+`cloud_support.create_instance` is used after the image/token checkpoint; `setup-demo` persists its returned ID and performs the final read-back checks. The other recipes are intentionally not used for the full resource flows: `create_group` does not reconcile duplicate names against ownership tags, `create_bucket` combines creation and tagging so it cannot preserve the pre-create and post-create checkpoints, and `mock_inputs` does not filter for currently available mock images. The setup path keeps its direct, ownership-checked EC2/S3 sequence where those checkpoints are required.
 
 ## Observed webhook latency
 
@@ -186,15 +241,17 @@ The console notification adapter is development-only. Final course evidence requ
 
 ## Verification matrix
 
+The offline snapshot below was rerun after the worker and provisioning changes in this task. It records only offline checks; LocalStack and live-service evidence remain pending. No integration evidence row is promoted by this change.
+
 ### Verified snapshot
 
 - Environment: Python 3.12.3 in `.venv`; selected and verified project team target. The second member's environment remains to be confirmed.
-- Offline command: `./.venv/bin/python -m pytest -m "not integracion" -q` — **56 passed, 6 `integracion` tests deselected**.
+- Offline command: `./.venv/bin/python -m pytest -m "not integracion" -q` — **68 passed, 6 `integracion` tests deselected**.
 - `git diff --check` passed; `pip check` reported no broken requirements.
 - A scan found no Python `TODO` or `NotImplementedError` placeholders.
 - No LocalStack, AWS, or real Telegram calls were made.
 
-The 53 passing tests include repository compliance guards, CLI boundary/raw-byte tests, queued-log flush coverage, the parameterized Telegram 5xx `Retry-After` regression test, and a crash-window case where a repair succeeds but saving its ledger checkpoint fails; the retry re-queries the resource and converges without repeating the EC2 start effect. F01, F02, F03, F08, F10, and the LocalStack portion of F13 remain pending course-approved integration. LocalStack scenarios also require the opt-in variables documented below.
+The 68 passing tests include repository compliance guards, explicit local-credential configuration checks, CLI boundary/raw-byte tests, queued-log flush coverage, Telegram retry handling, crash-window recovery, worker ACK/visibility `ClientError` handling, setup inventory checkpoints, reset reconciliation, and rejection of non-dummy AWS credentials. F01, F02, F03, F08, F10, and the LocalStack portion of F13 remain pending course-approved integration. LocalStack scenarios also require the opt-in variables documented below.
 
 `tests/test_compliance.py` checks the assignment's prohibited exception/finally patterns; `tests/test_cli.py` checks early argument rejection, exact signed-file bytes, and listener cleanup; `tests/test_logging.py` verifies queued records flush on listener stop. The opt-in F01 integration test also checks that the work queue targets the configured DLQ, uses `maxReceiveCount=3`, and that the DLQ has no nested redrive policy; that integration test was not run.
 
@@ -236,4 +293,4 @@ To opt in to the integration tests, first obtain the course's approval and prepa
 
 ## AI assistance declaration
 
-AI assistance was used to implement the validation, queue, LocalStack lab, webhook, remediation, Telegram, worker, ledger, and test/documentation changes. The Python 3.12.3 `.venv` offline run passed 56 tests with 6 integration tests deselected, including the inventory-ID contract, observed latency, compliance, CLI, logging lifecycle, 5xx `Retry-After`, and repair-checkpoint crash-window tests; `git diff --check` and `pip check` also passed, and no Python TODO or NotImplementedError placeholders remain. No LocalStack, AWS, or real Telegram calls occurred. Course-approved integration evidence, final evidence artifacts, human review, role assignments, real Telegram confirmation, and video materials remain pending. The team must review and understand all changes before submission.
+AI assistance was used to implement the validation, queue, LocalStack lab, webhook, remediation, Telegram, worker, ledger, and test/documentation changes. The Python 3.12.3 `.venv` offline run passed 68 tests with 6 integration tests deselected, including the inventory-ID contract, environment credential checks, observed latency, worker error handling, ACK status, provisioning checkpoints, reset recovery, compliance, CLI, logging lifecycle, Telegram retries, and crash-window recovery; `git diff --check` and `pip check` also passed, and no Python TODO or NotImplementedError placeholders remain. No LocalStack, AWS, or real Telegram calls occurred. Course-approved integration evidence, final evidence artifacts, human review, role assignments, real Telegram confirmation, and video materials remain pending. The team must review and understand all changes before submission.

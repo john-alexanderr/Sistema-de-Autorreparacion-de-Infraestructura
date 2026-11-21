@@ -6,6 +6,7 @@ import time
 from botocore.exceptions import ClientError
 
 from fenix.config.settings import client
+from fenix.services.cloud_support import create_instance
 from fenix.utils.errors import PermanentError, ValidationError
 from fenix.utils.state import load, save
 from fenix.utils.validation import identifier
@@ -67,20 +68,102 @@ def _find_security_group(ec2, group: str, vpc_id: str, tags: dict[str, str]) -> 
     return groups[0] if groups else None
 
 
-def _find_instance(ec2, tags: dict[str, str]) -> dict | None:
-    filters = [
+def _legacy_client_token(group: str) -> str:
+    return hashlib.sha256(f"ppa2-fenix:{group}:node:v1".encode("utf-8")).hexdigest()
+
+
+def _valid_client_token(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and 1 <= len(value) <= 64
+        and value.isascii()
+        and all(character.isalnum() or character == "-" for character in value)
+    )
+
+
+def _client_token_filter_unsupported(error: ClientError) -> bool:
+    """Return True when the emulator does not implement the client-token filter."""
+    details = error.response.get("Error", {})
+    code = details.get("Code")
+    message = details.get("Message") or str(error)
+    return code == "InternalFailure" and (
+        "client-token" in message
+        and "not been implemented" in message.lower()
+    )
+
+
+def _describe_by_client_token(ec2, token: str) -> dict | None:
+    """Query by client token, tolerating emulators that do not support the filter."""
+    try:
+        return ec2.describe_instances(
+            Filters=[{"Name": "client-token", "Values": [token]}]
+        )
+    except ClientError as error:
+        if _client_token_filter_unsupported(error):
+            return None
+        raise
+
+
+def _find_instance(ec2, tags: dict[str, str], client_tokens: list[str]) -> dict | None:
+    tag_filters = [
         {"Name": f"tag:{key}", "Values": [value]}
         for key, value in tags.items()
     ]
-    filters.append({"Name": "instance-state-name", "Values": ["pending", "running", "stopped"]})
-    instances = [
-        instance
-        for reservation in ec2.describe_instances(Filters=filters).get("Reservations", [])
-        for instance in reservation.get("Instances", [])
-    ]
+    responses = [ec2.describe_instances(Filters=tag_filters)]
+    responses.extend(
+        response
+        for token in client_tokens
+        if (response := _describe_by_client_token(ec2, token)) is not None
+    )
+    instances = {}
+    for response in responses:
+        for reservation in response.get("Reservations", []):
+            for instance in reservation.get("Instances", []):
+                instance_id = instance.get("InstanceId")
+                if not isinstance(instance_id, str) or not instance_id:
+                    raise PermanentError("Matching EC2 instance has no identifier")
+                instances[instance_id] = instance
     if len(instances) > 1:
         raise PermanentError("Multiple matching EC2 instances were found")
-    return instances[0] if instances else None
+    if not instances:
+        return None
+    instance = next(iter(instances.values()))
+    _require_tags(_tags_dict(instance.get("Tags", [])), tags)
+    state = instance.get("State", {}).get("Name")
+    if state not in {"pending", "running", "stopped"}:
+        raise PermanentError("Owned EC2 instance is not in a recoverable state")
+    return instance
+
+
+def _instance_client_token(
+    group: str,
+    image_id: str,
+    security_group_id: str,
+    previous: dict,
+    security_group_created: bool,
+) -> str:
+    previous_image_id = previous.get("image_id")
+    previous_security_group_id = previous.get("security_group_id")
+    previous_token = previous.get("client_token")
+    same_parameters = (
+        previous_image_id == image_id
+        and previous_security_group_id == security_group_id
+    )
+    if same_parameters:
+        return previous_token if _valid_client_token(previous_token) else _legacy_client_token(group)
+
+    checkpoint_without_launch = (
+        previous.get("status") == "provisioning"
+        and previous.get("id") is None
+        and previous_image_id is None
+        and previous_token is None
+        and previous_security_group_id == security_group_id
+    )
+    if (not previous and security_group_created) or checkpoint_without_launch:
+        return _legacy_client_token(group)
+
+    parameters = f"ppa2-fenix:{group}:node:v1:{image_id}:{security_group_id}"
+    return hashlib.sha256(parameters.encode("utf-8")).hexdigest()
 
 
 def _default_vpc(ec2) -> str:
@@ -168,9 +251,14 @@ def setup_demo(group: str) -> dict:
     security_group_tags = {**ownership, "Name": f"fenix-{group}-sg"}
     node_tags = {**ownership, "Name": node_name}
     previous_node = inventory.get("node-01", {})
-    saved_image_id = previous_node.get("image_id") if isinstance(previous_node, dict) else None
+    if not isinstance(previous_node, dict):
+        previous_node = {}
+    previous_token = previous_node.get("client_token")
+    if previous_token is not None and not _valid_client_token(previous_token):
+        raise ValidationError("Inventory EC2 client token is invalid")
 
     security_group = _find_security_group(ec2, group, vpc_id, security_group_tags)
+    security_group_created = False
     if security_group is None:
         try:
             result = ec2.create_security_group(
@@ -182,6 +270,7 @@ def setup_demo(group: str) -> dict:
                 ],
             )
             security_group_id = result["GroupId"]
+            security_group_created = True
         except ClientError as error:
             if error.response.get("Error", {}).get("Code") != "InvalidGroup.Duplicate":
                 raise
@@ -201,13 +290,18 @@ def setup_demo(group: str) -> dict:
     node_record = {
         "type": "ec2",
         "group_id": group,
-        "image_id": saved_image_id if isinstance(saved_image_id, str) else None,
+        "image_id": None,
         "security_group_id": security_group_id,
+        "security_group_expected_tags": security_group_tags,
         "expected_tags": node_tags,
         "status": "provisioning",
     }
+    _save_entry(inventory, "node-01", node_record)
 
-    instance = _find_instance(ec2, node_tags)
+    client_tokens = [_legacy_client_token(group)]
+    if isinstance(previous_token, str) and previous_token not in client_tokens:
+        client_tokens.append(previous_token)
+    instance = _find_instance(ec2, node_tags, client_tokens)
     if instance is None:
         images = ec2.describe_images(
             Filters=[{"Name": "state", "Values": ["available"]}]
@@ -219,46 +313,53 @@ def setup_demo(group: str) -> dict:
         )
         if not image_ids:
             raise PermanentError("LocalStack did not provide an available mock image")
-        if node_record["image_id"] is None:
-            node_record["image_id"] = image_ids[0]
-        elif node_record["image_id"] not in image_ids:
-            raise PermanentError("Saved LocalStack mock image is no longer available")
-        token = hashlib.sha256(f"ppa2-fenix:{group}:node:v1".encode("utf-8")).hexdigest()
-        response = ec2.run_instances(
-            ImageId=node_record["image_id"],
-            InstanceType="t3.micro",
-            MinCount=1,
-            MaxCount=1,
-            SecurityGroupIds=[security_group_id],
-            ClientToken=token,
-            TagSpecifications=[
-                {"ResourceType": "instance", "Tags": _tag_list(node_tags)}
-            ],
+        saved_image_id = previous_node.get("image_id")
+        image_id = saved_image_id if saved_image_id in image_ids else image_ids[0]
+        token = _instance_client_token(
+            group,
+            image_id,
+            security_group_id,
+            previous_node,
+            security_group_created,
         )
-        instance = response["Instances"][0]
-    instance_id = instance.get("InstanceId")
+        node_record["image_id"] = image_id
+        node_record["client_token"] = token
+        _save_entry(inventory, "node-01", node_record)
+        instance_id = create_instance(image_id, security_group_id, token, node_tags)
+    else:
+        instance_id = instance.get("InstanceId")
     if not isinstance(instance_id, str) or not instance_id:
         raise PermanentError("Created EC2 instance has no identifier")
+    node_record["id"] = instance_id
+    _save_entry(inventory, "node-01", node_record)
+
     observed_response = ec2.describe_instances(InstanceIds=[instance_id])
     observed_instances = [
         observed
         for reservation in observed_response.get("Reservations", [])
         for observed in reservation.get("Instances", [])
     ]
-    if len(observed_instances) != 1:
+    if (
+        len(observed_instances) != 1
+        or observed_instances[0].get("InstanceId") != instance_id
+    ):
         raise PermanentError("Created EC2 instance could not be verified")
     instance = observed_instances[0]
     observed_image_id = instance.get("ImageId")
     if not isinstance(observed_image_id, str) or not observed_image_id:
         raise PermanentError("EC2 image identifier could not be verified")
-    if node_record["image_id"] is not None and observed_image_id != node_record["image_id"]:
-        raise PermanentError("EC2 instance image does not match the saved lab image")
+    if instance.get("State", {}).get("Name") not in {"pending", "running", "stopped"}:
+        raise PermanentError("EC2 instance is not in a recoverable state")
     node_record["image_id"] = observed_image_id
     _require_tags(_tags_dict(instance.get("Tags", [])), node_tags)
     security_groups = {item.get("GroupId") for item in instance.get("SecurityGroups", [])}
     if security_group_id not in security_groups:
         raise PermanentError("EC2 instance is attached to an unexpected security group")
-    node_record["id"] = instance_id
+    observed_token = instance.get("ClientToken")
+    if _valid_client_token(observed_token):
+        node_record["client_token"] = observed_token
+    elif _valid_client_token(previous_token):
+        node_record["client_token"] = previous_token
     node_record["status"] = "ready"
     _save_entry(inventory, "node-01", node_record)
 

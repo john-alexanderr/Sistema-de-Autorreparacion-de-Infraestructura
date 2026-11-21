@@ -39,12 +39,20 @@ def client(service: str):
     region = os.environ.get("AWS_DEFAULT_REGION")
     if not region:
         raise ValidationError("Missing AWS_DEFAULT_REGION")
+    access_key_id = os.environ.get("AWS_ACCESS_KEY_ID", "")
+    secret_access_key = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
+    if not access_key_id:
+        raise ValidationError("Missing AWS_ACCESS_KEY_ID")
+    if not secret_access_key:
+        raise ValidationError("Missing AWS_SECRET_ACCESS_KEY")
+    if access_key_id != "test" or secret_access_key != "test":
+        raise ValidationError("Invalid AWS credentials configuration")
     return boto3.client(
         service,
         endpoint_url=endpoint,
         region_name=region,
-        aws_access_key_id="test",
-        aws_secret_access_key="test",
+        aws_access_key_id=access_key_id,
+        aws_secret_access_key=secret_access_key,
         config=Config(
             connect_timeout=2,
             read_timeout=15,

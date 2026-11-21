@@ -129,8 +129,11 @@ def test_event_contract_requires_canonical_inventory_id_key():
 
 @pytest.mark.base
 def test_cloud_client_fails_closed_and_uses_dummy_local_credentials(monkeypatch):
+    monkeypatch.setattr(settings, "load_dotenv", lambda: None)
     monkeypatch.setenv("AWS_ENDPOINT_URL", "http://127.0.0.1:4566")
     monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "test")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "test")
     calls = []
     monkeypatch.setattr(settings.boto3, "client", lambda *args, **kwargs: calls.append((args, kwargs)) or "client")
     assert settings.client("sqs") == "client"
@@ -146,3 +149,45 @@ def test_cloud_client_fails_closed_and_uses_dummy_local_credentials(monkeypatch)
         monkeypatch.setenv("AWS_ENDPOINT_URL", endpoint)
         with pytest.raises(ValidationError):
             settings.client("sqs")
+
+
+@pytest.mark.base
+@pytest.mark.parametrize("missing_variable", ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"))
+def test_cloud_client_requires_both_credentials_before_calling_boto3(monkeypatch, missing_variable):
+    monkeypatch.setattr(settings, "load_dotenv", lambda: None)
+    monkeypatch.setenv("AWS_ENDPOINT_URL", "http://127.0.0.1:4566")
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "dummy-local-access-key")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "dummy-local-secret-key")
+    monkeypatch.delenv(missing_variable)
+    calls = []
+    monkeypatch.setattr(settings.boto3, "client", lambda *args, **kwargs: calls.append((args, kwargs)))
+
+    with pytest.raises(ValidationError, match=f"Missing {missing_variable}"):
+        settings.client("sqs")
+
+    assert calls == []
+
+
+@pytest.mark.base
+@pytest.mark.parametrize(
+    ("access_key_id", "secret_access_key"),
+    (("unsafe-access-key", "test"), ("test", "unsafe-secret-value")),
+)
+def test_cloud_client_rejects_non_test_credentials_before_calling_boto3(
+    monkeypatch, access_key_id, secret_access_key
+):
+    monkeypatch.setattr(settings, "load_dotenv", lambda: None)
+    monkeypatch.setenv("AWS_ENDPOINT_URL", "http://127.0.0.1:4566")
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", access_key_id)
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", secret_access_key)
+    calls = []
+    monkeypatch.setattr(settings.boto3, "client", lambda *args, **kwargs: calls.append((args, kwargs)))
+
+    with pytest.raises(ValidationError) as error:
+        settings.client("sqs")
+
+    assert access_key_id not in str(error.value)
+    assert secret_access_key not in str(error.value)
+    assert calls == []
