@@ -7,6 +7,7 @@ import time
 from contextlib import asynccontextmanager
 
 from botocore.exceptions import BotoCoreError, ClientError
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
@@ -18,6 +19,7 @@ from fenix.utils.logging_json import setup as setup_logging
 from fenix.utils.state import load
 
 
+load_dotenv()
 INVENTORY_PATH = "data/inventory.json"
 
 
