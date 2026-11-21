@@ -13,12 +13,12 @@ El equipo docente aprobó una excepción para equipos de dos personas. Esto no e
 
 | Rol obligatorio del curso | Enfoque del módulo y resumen de evidencias | Persona responsable |
 |---|---|---|
-| I1 Entradas y Excepciones | `receiver.py`, `events.py`, validación y gestión de firmas; rechazo de entradas firmadas y evidencia de errores HTTP (F04–F07, F13). | `[Pending: asignación]` |
+| I1 Entradas y Excepciones | `receiver.py`, `events.py`, validación y gestión de firmas; rechazo de entradas firmadas y evidencia de errores HTTP (F04–F07, F13). | `[JUAN RASTELLINI]` |
 | I2 Mensajería e Inventario Cloud | `sqs.py`, `demo.py` y configuración; comportamiento de la cola/DLQ, inventario propiedad del grupo y evidencias de conciliación (F01, F08, F10). | `[Pending: asignación]` |
 | I3 Webhooks y Reparación | Aceptación de webhooks y remediación verificada de EC2/S3 en `receiver.py` y `remediation.py` (F02–F07). | `[Pending: asignación]` |
 | I4 Observabilidad y Comunicación | Evidencias de entrega y reintentos de Telegram, y registros rotativos con datos redactados en `notifications.py` y `logging_json.py` (F02, F14, F16). | `[Pending: asignación]` |
 | I5 Integración y Worker | Procesamiento durable, reintentos mediante cambios del tiempo de visibilidad en SQS, recuperación y confirmación en `worker.py`, `state.py` y `sqs.py` (F08–F12). | `[Pending: asignación]` |
-| I6 Pruebas y Diagnóstico | Informes de pruebas y evidencias de diagnóstico vinculados con la matriz de verificación (F01–F16), diferenciando los resultados sin conexión de las integraciones pendientes. | `[Pending: asignación]` |
+| I6 Pruebas y Diagnóstico | Informes de pruebas y evidencias de diagnóstico vinculados con la matriz de verificación (F01–F16), diferenciando los resultados sin conexión de las integraciones pendientes. | `[JUAN RASTELLINI]` |
 
 ## Requisitos previos
 
