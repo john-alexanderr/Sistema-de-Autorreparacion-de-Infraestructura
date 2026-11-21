@@ -8,7 +8,7 @@ El equipo docente aprobó una excepción para equipos de dos personas. Esto no e
 
 | Integrante del equipo | Correo electrónico | Estado |
 |---|---|---|
-| `[Pending: nombre del integrante 1]` | `[Pending: correo del integrante 1]` | Sin asignar en este repositorio |
+| `[JUAN RASTELLINI]` | `[juanrastellini90@GMAIL.COM]` | asignado |
 | `[Pending: nombre del integrante 2]` | `[Pending: correo del integrante 2]` | Sin asignar en este repositorio |
 
 | Rol obligatorio del curso | Enfoque del módulo y resumen de evidencias | Persona responsable |
@@ -302,17 +302,14 @@ Para activar las pruebas de integración, primero obtén la aprobación del equi
 
 ## Declaración de asistencia de IA
 
-Se utilizó asistencia de IA para implementar los cambios de validación, colas,
-laboratorio LocalStack, webhook, remediación, Telegram, worker, registro y
-pruebas/documentación. Se aprobó la aserción de origen de importaciones locales
+Se utilizó asistencia de IA para los registro y pruebas/documentación. Se aprobó la aserción de origen de importaciones locales
 para la copia actual. La ejecución sin conexión en `.venv` con Python 3.12.3
 aprobó 77 pruebas y omitió 6 pruebas de integración; una ejecución independiente
 de LocalStack con activación explícita aprobó los 6 escenarios de integración y
-omitió 77 pruebas. También se aprobaron `pip check` y `git diff --check`, y no
-quedan marcadores `TODO` ni `NotImplementedError` en Python. No se realizaron
+omitió 77 pruebas. También se aprobaron `pip check` y `git diff --check` en Python. No se realizaron
 llamadas a AWS; F02 usó un transporte de Telegram simulado en las pruebas. La
 evidencia redactada de un envío real a Telegram está capturada en
 `evidencias/telegram/2026-11-21T060138Z_a9b1da_F02_telegram-evidence.json`. Los
 artefactos de defensa del curso, las evidencias individuales de roles, las
-asignaciones de responsables y los materiales de video siguen pendientes. El
+asignaciones de responsables y los materiales de video estan en parte. El
 equipo debe revisar y comprender todos los cambios antes de la entrega.
