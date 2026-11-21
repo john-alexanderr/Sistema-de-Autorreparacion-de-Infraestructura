@@ -110,11 +110,10 @@ def _find_instance(ec2, tags: dict[str, str], client_tokens: list[str]) -> dict 
         for key, value in tags.items()
     ]
     responses = [ec2.describe_instances(Filters=tag_filters)]
-    responses.extend(
-        response
-        for token in client_tokens
-        if (response := _describe_by_client_token(ec2, token)) is not None
-    )
+    for token in client_tokens:
+        response = _describe_by_client_token(ec2, token)
+        if response is not None:
+            responses.append(response)
     instances = {}
     for response in responses:
         for reservation in response.get("Reservations", []):
