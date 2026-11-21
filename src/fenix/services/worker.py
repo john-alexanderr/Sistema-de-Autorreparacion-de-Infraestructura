@@ -1,4 +1,4 @@
-"""Single-message SQS worker with durable-stage handling and explicit ACKs."""
+"""Worker de SQS de un solo mensaje, con gestión de etapas durables y ACK explícitos."""
 
 import json
 import logging
@@ -73,7 +73,7 @@ def _retain(url: str, message: dict, error: Exception, context: dict, logger) ->
 
 
 def run(url: str, handler, logger, once: bool = False) -> None:
-    """Poll, handle one message at a time, and ACK only after handler success."""
+    """Consulta y procesa un mensaje a la vez; solo lo confirma si el controlador termina correctamente."""
     while True:
         try:
             messages = receive(url)

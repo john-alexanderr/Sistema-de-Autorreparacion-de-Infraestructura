@@ -1,16 +1,16 @@
-"""Sanitized domain errors shared by the application services."""
+"""Errores de dominio saneados que comparten los servicios de la aplicación."""
 
 
 class ProjectError(Exception):
-    """Base class for expected application failures."""
+    """Clase base para los fallos previstos de la aplicación."""
 
 
 class ValidationError(ProjectError):
-    """Input or inventory data violates an explicit contract."""
+    """Los datos de entrada o del inventario incumplen un contrato explícito."""
 
 
 class RetryableError(ProjectError):
-    """A transient failure that should leave the SQS message available."""
+    """Fallo transitorio por el que el mensaje debe quedar disponible en SQS."""
 
     def __init__(self, message: str, retry_after: int | None = None) -> None:
         super().__init__(message)
@@ -18,4 +18,4 @@ class RetryableError(ProjectError):
 
 
 class PermanentError(ProjectError):
-    """A non-retryable domain failure retained until SQS redrives the message."""
+    """Fallo de dominio no reintentable; el mensaje se conserva hasta que SQS lo redirija."""

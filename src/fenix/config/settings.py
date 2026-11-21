@@ -1,4 +1,4 @@
-"""Fail-closed configuration for the local LocalStack endpoint."""
+"""Configuración de denegación predeterminada para el endpoint local de LocalStack."""
 
 import os
 from urllib.parse import urlparse
@@ -11,10 +11,11 @@ from fenix.utils.errors import ValidationError
 
 
 def client(service: str):
-    """Build a Boto3 client restricted to loopback port 4566.
+    """Crea un cliente de Boto3 restringido al puerto 4566 de loopback.
 
-    Python runs on the host, so the application does not use container service
-    names, AWS profiles, or credentials from a real AWS account.
+    Python se ejecuta en el host, por lo que la aplicación no usa nombres de
+    servicios de contenedores, perfiles de AWS ni credenciales de una cuenta real
+    de AWS.
     """
     load_dotenv()
     endpoint = os.environ.get("AWS_ENDPOINT_URL", "")

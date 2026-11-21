@@ -1,4 +1,4 @@
-"""Standard SQS queue operations for Fénix."""
+"""Operaciones de colas estándar de SQS para Fénix."""
 
 import json
 
@@ -24,7 +24,7 @@ def _ensure_queue(sqs, name: str, attributes: dict[str, str]) -> str:
 
 
 def ensure_queues(prefix: str) -> tuple[str, str]:
-    """Create or reconcile one standard work queue and its standard DLQ."""
+    """Crea o concilia una cola de trabajo estándar y su DLQ estándar."""
     identifier(prefix)
     sqs = client("sqs")
     dead_url = _ensure_queue(
@@ -53,13 +53,13 @@ def ensure_queues(prefix: str) -> tuple[str, str]:
 
 
 def queue_url(prefix: str) -> str:
-    """Return the current URL for a previously initialized work queue."""
+    """Devuelve la URL actual de una cola de trabajo inicializada previamente."""
     identifier(prefix)
     return client("sqs").get_queue_url(QueueName=f"{prefix}-events")["QueueUrl"]
 
 
 def publish(url: str, event: dict, delay: int = 0) -> str:
-    """Publish a validated event and return the SQS-assigned message ID."""
+    """Publica un evento validado y devuelve el ID de mensaje asignado por SQS."""
     if type(delay) is not int or not 0 <= delay <= 900:
         raise ValueError("DelaySeconds must be an integer from 0 to 900")
     response = client("sqs").send_message(
@@ -77,7 +77,7 @@ def publish(url: str, event: dict, delay: int = 0) -> str:
 
 
 def receive(url: str) -> list[dict]:
-    """Long-poll for at most one message and expose the current receipt handle."""
+    """Realiza un sondeo prolongado de como máximo un mensaje y expone el identificador de recepción vigente."""
     response = client("sqs").receive_message(
         QueueUrl=url,
         MaxNumberOfMessages=1,
@@ -90,7 +90,7 @@ def receive(url: str) -> list[dict]:
 
 
 def acknowledge(url: str, receipt: str) -> None:
-    """Delete a message only with the receipt handle from its latest delivery."""
+    """Elimina un mensaje únicamente con el identificador de recepción de su entrega más reciente."""
     client("sqs").delete_message(QueueUrl=url, ReceiptHandle=receipt)
 
 
@@ -99,7 +99,7 @@ def retry_later(
     message: dict,
     minimum_delay: int | None = None,
 ) -> int:
-    """Change visibility using receive-count backoff, optionally honoring Retry-After."""
+    """Gestiona los reintentos mediante cambios del tiempo de visibilidad del mensaje en SQS, según el número de recepciones; de forma opcional, respeta Retry-After."""
     attributes = message.get("Attributes")
     receipt = message.get("ReceiptHandle")
     if not isinstance(attributes, dict) or not isinstance(receipt, str) or not receipt:

@@ -1,11 +1,11 @@
-"""Read-only inspection of the Fénix work queue and dead-letter queue.
+"""Inspección de solo lectura de la cola de trabajo y la cola de mensajes fallidos de Fénix.
 
-The script resolves the configured queues, reads their attributes, and compares
-the work queue redrive policy with the DLQ ARN. It never creates, updates, or
-deletes queues or messages. The only receive call is the explicit ``--peek``
-option, which uses ``VisibilityTimeout=0`` for one message and never deletes it.
+El script resuelve las colas configuradas, lee sus atributos y compara la política
+de redirección de la cola de trabajo con el ARN de la DLQ. Nunca crea, actualiza ni
+elimina colas o mensajes. La única llamada de recepción es la opción explícita
+``--peek``, que usa ``VisibilityTimeout=0`` para un mensaje y nunca lo elimina.
 
-Run from the repository root::
+Ejecuta desde la raíz del repositorio::
 
     ./.venv/bin/python scripts/check_dlq.py
     ./.venv/bin/python scripts/check_dlq.py --peek --json
@@ -43,7 +43,7 @@ _COUNTS_NOTE = "SQS counts are approximate and may lag behind the actual queue s
 
 
 def _as_int(value: object) -> int | None:
-    """Convert numeric SQS attribute strings to integers when possible."""
+    """Convierte a enteros, cuando es posible, las cadenas numéricas de atributos de SQS."""
     if isinstance(value, bool):
         return None
     try:
@@ -53,7 +53,7 @@ def _as_int(value: object) -> int | None:
 
 
 def _sent_timestamp(value: object) -> str | None:
-    """Return a valid SQS timestamp as ISO-8601 UTC, without raw input."""
+    """Devuelve una marca de tiempo válida de SQS como ISO-8601 UTC, sin incluir la entrada sin procesar."""
     millis = _as_int(value)
     if millis is None:
         return None
@@ -65,14 +65,14 @@ def _sent_timestamp(value: object) -> str | None:
 
 
 def _queue_attributes(sqs, url: str) -> dict:
-    """Read the approved read-only attribute subset for one queue."""
+    """Lee el subconjunto aprobado de atributos de solo lectura de una cola."""
     response = sqs.get_queue_attributes(QueueUrl=url, AttributeNames=_ATTRIBUTE_NAMES)
     attributes = response.get("Attributes", {})
     return attributes if isinstance(attributes, dict) else {}
 
 
 def _counts(attributes: dict) -> dict:
-    """Build the approximate count section from queue attributes."""
+    """Construye la sección de recuentos aproximados a partir de los atributos de la cola."""
     return {
         "visible": _as_int(attributes.get("ApproximateNumberOfMessages")),
         "not_visible": _as_int(attributes.get("ApproximateNumberOfMessagesNotVisible")),
@@ -81,7 +81,7 @@ def _counts(attributes: dict) -> dict:
 
 
 def _parse_redrive(raw: object) -> dict:
-    """Parse the work queue redrive policy without trusting its shape."""
+    """Interpreta la política de redirección de la cola de trabajo sin confiar en su estructura."""
     result = {
         "present": False,
         "max_receive_count": None,
@@ -110,7 +110,7 @@ def _parse_redrive(raw: object) -> dict:
 
 
 def _peek(sqs, url: str) -> dict:
-    """Read one DLQ message and return safe metadata, never its body or ID."""
+    """Lee un mensaje de la DLQ y devuelve metadatos seguros, nunca su cuerpo ni su ID."""
     response = sqs.receive_message(
         QueueUrl=url,
         MaxNumberOfMessages=1,
@@ -135,7 +135,7 @@ def _peek(sqs, url: str) -> dict:
 
 
 def _inspect(sqs, prefix: str, peek: bool) -> tuple[dict, bool]:
-    """Read queue attributes and return the report plus the compliance verdict."""
+    """Lee los atributos de las colas y devuelve el informe junto con el resultado de cumplimiento."""
     work_url = sqs.get_queue_url(QueueName=f"{prefix}-events")["QueueUrl"]
     dlq_url = sqs.get_queue_url(QueueName=f"{prefix}-dlq")["QueueUrl"]
     work_attributes = _queue_attributes(sqs, work_url)
@@ -180,7 +180,7 @@ def _inspect(sqs, prefix: str, peek: bool) -> tuple[dict, bool]:
 
 
 def _print_human(result: dict) -> None:
-    """Render the report for a human reader using safe message metadata."""
+    """Presenta el informe para una persona mediante metadatos seguros del mensaje."""
     work = result["work_queue"]
     dlq = result["dlq"]
     print("Work queue:")
@@ -226,12 +226,12 @@ def _print_human(result: dict) -> None:
 
 
 def _describe_error(error: Exception) -> str:
-    """Return only the error class, never provider or exception message text."""
+    """Devuelve únicamente la clase del error, nunca el proveedor ni el texto de la excepción."""
     return type(error).__name__
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    """Create the CLI parser after .env values are available for defaults."""
+    """Crea el analizador de la CLI después de disponer de los valores de .env para usarlos como predeterminados."""
     parser = argparse.ArgumentParser(
         description="Inspect the Fénix work queue and DLQ without mutating them.",
     )
@@ -257,7 +257,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
-    """Run the read-only queue inspection and return a process exit code."""
+    """Ejecuta la inspección de solo lectura de las colas y devuelve un código de salida del proceso."""
     load_dotenv(ROOT / ".env")
     parser = _build_parser()
     args = parser.parse_args(argv)

@@ -1,16 +1,17 @@
-"""Send one Telegram message and write privacy-safe confirmation evidence.
+"""Envía un mensaje de Telegram y guarda evidencia de confirmación que protege la privacidad.
 
-The script uses the production notification adapter, so a successful file proves
-that ``fenix.services.notifications.notify`` confirmed ``ok: true`` with the Bot
-API. It never prints or stores message text, message IDs, credentials, or API URLs.
+El script usa el adaptador de notificaciones de producción, por lo que un archivo
+exitoso demuestra que ``fenix.services.notifications.notify`` confirmó ``ok: true``
+mediante la Telegram Bot API. Nunca imprime ni almacena el texto del mensaje, los ID de
+mensajes, las credenciales ni las URL de la API.
 
-Configuration is read from the process environment or the repository ``.env``:
+La configuración se lee del entorno del proceso o del archivo ``.env`` del repositorio:
 
 * ``NOTIFY_PROVIDER=telegram``
 * ``TELEGRAM_BOT_TOKEN``
 * ``TELEGRAM_CHAT_ID``
 
-Run from the repository root::
+Ejecuta desde la raíz del repositorio::
 
     ./.venv/bin/python scripts/telegram_evidence.py
     ./.venv/bin/python scripts/telegram_evidence.py --dry-run
@@ -41,18 +42,18 @@ DEFAULT_OUT_DIR = ROOT / "evidencias" / "telegram"
 
 
 def _utc_now() -> str:
-    """Return an ISO-8601 UTC timestamp with a trailing Z."""
+    """Devuelve una marca de tiempo ISO-8601 UTC terminada en Z."""
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _build_message() -> str:
-    """Build a non-sensitive, uniquely identifiable evidence message."""
+    """Construye un mensaje de evidencia no confidencial e identificable de forma única."""
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     return f"Fenix Telegram evidence | {stamp} | {uuid4().hex[:8]}"
 
 
 def _configuration_error() -> str | None:
-    """Return a sanitized configuration error, or None when ready."""
+    """Devuelve un error de configuración saneado o None si está todo listo."""
     provider = os.getenv("NOTIFY_PROVIDER", "").strip().lower()
     token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
@@ -70,13 +71,13 @@ def _configuration_error() -> str | None:
 
 
 def _evidence_path(out_dir: Path) -> Path:
-    """Return a unique, timestamped evidence path."""
+    """Devuelve una ruta de evidencia única con marca de tiempo."""
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
     return out_dir / f"{stamp}_{uuid4().hex[:6]}_F02_telegram-evidence.json"
 
 
 def _resolve_out_dir(value: str) -> Path | None:
-    """Resolve an output directory only when it remains inside this checkout."""
+    """Resuelve un directorio de salida solo si permanece dentro de esta copia de trabajo."""
     candidate = Path(value).expanduser()
     if not candidate.is_absolute():
         candidate = DEFAULT_OUT_DIR / candidate
@@ -93,7 +94,7 @@ def _resolve_out_dir(value: str) -> Path | None:
 
 
 def _build_evidence() -> dict:
-    """Build a confirmation record without message or provider identifiers."""
+    """Construye un registro de confirmación sin identificadores del mensaje ni del proveedor."""
     return {
         "captured_at_utc": _utc_now(),
         "provider": "telegram",
@@ -108,7 +109,7 @@ def _build_evidence() -> dict:
 
 
 def main(argv=None) -> int:
-    """Send the message, write redacted evidence, and return an exit code."""
+    """Envía el mensaje, escribe evidencia redactada y devuelve un código de salida."""
     load_dotenv(ROOT / ".env")
     parser = argparse.ArgumentParser(
         description="Send one Telegram message and write privacy-safe evidence.",

@@ -10,11 +10,11 @@ from fenix.utils.errors import PermanentError  # Describe un entorno no preparad
 def aws_tags(values: dict[str, str]) -> list[dict[str, str]]:
     """Convierte una política simple al formato de tags de S3 y EC2.
 
-    Args:
+    Argumentos:
         values: Mapa de claves y valores de texto, ya validado por el llamador.
-    Returns:
+    Devuelve:
         Lista de objetos con Key y Value.
-    Raises:
+    Errores:
         TypeError: Si values no es un diccionario apropiado.
     """
     return [{"Key": key, "Value": value} for key, value in values.items()]  # Formato SDK.
@@ -23,12 +23,12 @@ def aws_tags(values: dict[str, str]) -> list[dict[str, str]]:
 def mock_inputs() -> tuple[str, str]:
     """Descubre la VPC predeterminada y una AMI emulada disponible.
 
-    Returns:
+    Devuelve:
         Tupla (vpc_id, image_id) que se debe guardar en el inventario.
-    Raises:
+    Errores:
         PermanentError: Si el laboratorio no tiene VPC o imágenes para el ejemplo.
         ClientError: Si el emulador rechaza la consulta.
-    Notes:
+    Notas:
         No crea una VPC ni descarga imágenes. La cátedra prepara el emulador.
         Funciona con EC2_VM_MANAGER=mock; no habilitar modo Docker para este TP.
     """
@@ -44,16 +44,16 @@ def mock_inputs() -> tuple[str, str]:
 def create_bucket(name: str, tags: dict[str, str]) -> str:
     """Crea un bucket nuevo sin versionado y le aplica las etiquetas iniciales.
 
-    Args:
+    Argumentos:
         name: Nombre exclusivo del grupo, comprobado antes de invocar.
         tags: Etiquetas obligatorias ya validadas.
-    Returns:
+    Devuelve:
         Nombre del bucket creado.
-    Raises:
+    Errores:
         ClientError: Si existe, no hay permisos o falla el etiquetado.
-    Side Effects:
+    Efectos secundarios:
         Crea almacenamiento S3 y aplica tags mediante una segunda llamada.
-    Notes:
+    Notas:
         Solo us-east-1 en este laboratorio. Si falla la segunda llamada, el bucket
         ya existe: el llamador debe recuperarlo y registrar el estado parcial.
     """
@@ -66,15 +66,15 @@ def create_bucket(name: str, tags: dict[str, str]) -> str:
 def create_group(name: str, vpc_id: str, tags: dict[str, str]) -> str:
     """Crea un SG exclusivo de laboratorio sin reglas de entrada.
 
-    Args:
+    Argumentos:
         name: Nombre exclusivo del grupo y del entorno.
         vpc_id: VPC predeterminada obtenida del emulador; no se eliminará.
         tags: Etiquetas que identifican la pertenencia del SG.
-    Returns:
+    Devuelve:
         GroupId devuelto por EC2.
-    Raises:
+    Errores:
         ClientError: Si ya existe, los datos son inválidos o falla el servicio.
-    Side Effects:
+    Efectos secundarios:
         Añade un grupo de seguridad; no abre puertos ni modifica otros SG.
     """
     response = client("ec2").create_security_group(  # Un paso de aprovisionamiento.
@@ -88,18 +88,18 @@ def create_instance(image_id: str, group_id: str, token: str,
                     tags: dict[str, str]) -> str:
     """Solicita una sola instancia mock con un token estable de idempotencia.
 
-    Args:
+    Argumentos:
         image_id: AMI mock descubierta y guardada por el grupo.
         group_id: SG propio recién creado o recuperado por el llamador.
         token: Texto ASCII estable de hasta 64 caracteres para el mismo entorno.
         tags: Etiquetas obligatorias del recurso.
-    Returns:
+    Devuelve:
         InstanceId informado por EC2.
-    Raises:
+    Errores:
         ClientError: Si la solicitud o el token contradicen una creación anterior.
-    Side Effects:
+    Efectos secundarios:
         Crea o recupera la solicitud EC2 asociada al token y mismos parámetros.
-    Notes:
+    Notas:
         Cambiar parámetros con el mismo token puede producir conflicto.
         Guardar los parámetros originales; no generar un token nuevo en un retry.
     """

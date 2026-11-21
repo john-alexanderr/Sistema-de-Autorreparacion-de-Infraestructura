@@ -1,4 +1,4 @@
-"""Command-line lifecycle for Fénix setup, fault injection, sending, and work."""
+"""Ciclo de vida de la CLI de Fénix: configuración, inyección de fallos, envío y procesamiento."""
 
 import argparse
 import json
@@ -18,7 +18,7 @@ from fenix.utils.logging_json import setup
 
 
 def main() -> int:
-    """Run one CLI command and always stop the process-local log listener."""
+    """Ejecuta un comando de la CLI y siempre detiene el listener de registros del proceso."""
     load_dotenv()
     parser = argparse.ArgumentParser(description="Fénix infrastructure self-repair lab")
     sub = parser.add_subparsers(dest="command", required=True)

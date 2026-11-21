@@ -1,4 +1,4 @@
-"""Convergent resource repairs and the durable per-event processing ledger."""
+"""Reparaciones convergentes de recursos y registro durable del procesamiento por evento."""
 
 import json
 
@@ -146,7 +146,7 @@ def _repair_bucket(resource: dict) -> str:
 
 
 def repair(resource: dict, event_type: str) -> str:
-    """Converge the authorized EC2 instance or S3 bucket and verify the result."""
+    """Hace converger la instancia EC2 o el bucket S3 autorizado y verifica el resultado."""
     if not isinstance(resource, dict) or resource.get("status", "ready") != "ready":
         raise PermanentError("Resource inventory record is not ready")
     if event_type == "instance.stopped" and resource.get("type") == "ec2":
@@ -167,7 +167,7 @@ def _persist_failure(ledger: dict, event_id: str, entry: dict, status: str) -> N
 
 
 def handle(event: dict) -> None:
-    """Resume a validated event from its last durably completed stage."""
+    """Reanuda un evento validado desde la última etapa completada de forma durable."""
     inventory = load(INVENTORY_PATH)
     if not isinstance(inventory, dict):
         raise ValidationError("Resource inventory is unavailable")

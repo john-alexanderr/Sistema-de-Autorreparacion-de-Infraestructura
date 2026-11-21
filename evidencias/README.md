@@ -1,32 +1,33 @@
-# Evidence index
+# Índice de evidencias
 
-This directory holds the course evidence for the Fénix local infrastructure
-self-repair project. Every file must come from a real command, test run, cloud
-inspection, Telegram confirmation, or recording performed by the team.
+Este directorio contiene las evidencias del curso para el proyecto de
+autorreparación local de infraestructura Fénix. Cada archivo debe provenir de
+un comando real, una ejecución de pruebas, una inspección de nube, una
+confirmación de Telegram o una grabación realizada por el equipo.
 
-> **Never fabricate evidence.** A placeholder stays as a placeholder until the
-> real command runs. Do not copy expected output into an "Observed" column, do
-> not invent screenshots, and do not create a fake Telegram success or video
-> link. Course reviewers must be able to reproduce the command and compare the
-> observed result.
+> **Nunca fabriques evidencias.** Los marcadores de posición deben mantenerse
+> hasta que se ejecute el comando real. No copies el resultado esperado en una
+> columna «Observado», no inventes capturas de pantalla ni crees una confirmación
+> falsa de Telegram o un enlace de video ficticio. Quienes revisen el curso deben
+> poder reproducir el comando y comparar el resultado observado.
 
-## Privacy and redaction checklist
+## Lista de control de privacidad y redacción
 
-Before committing any evidence, confirm all of the following.
+Antes de confirmar cualquier evidencia, verifica todos los puntos siguientes.
 
-- [ ] No `.env`, `.env.example` values, or local environment dumps are included.
-- [ ] No bot tokens, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, webhook secrets,
-      LocalStack authorization tokens, or AWS secret keys appear.
-- [ ] No AWS access key IDs, session tokens, or real account identifiers appear.
-- [ ] No private URLs, private chat links, email addresses, phone numbers, or
-      raw personal data appear.
-- [ ] Secret-like fields are replaced with `<redacted>`, including tokens,
-      passwords, credentials, authorization headers, signatures, and receipt
-      handles.
-- [ ] `git status` and `git diff --cached` were inspected before committing.
-- [ ] Screenshots and logs were opened after redaction to confirm nothing leaked.
+- [ ] No se incluyan `.env`, valores de `.env.example` ni volcados del entorno local.
+- [ ] No aparezcan tokens de bots, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, secretos de webhook,
+      tokens de autorización de LocalStack ni claves secretas de AWS.
+- [ ] No aparezcan ID de claves de acceso de AWS, tokens de sesión ni identificadores reales de cuentas.
+- [ ] No aparezcan URL privadas, enlaces a chats privados, correos electrónicos, números de teléfono
+      ni datos personales sin procesar.
+- [ ] Los campos que parezcan contener secretos se reemplacen por `<redacted>`, incluidos tokens,
+      contraseñas, credenciales, encabezados de autorización, firmas e identificadores
+      de recepción.
+- [ ] Se hayan inspeccionado `git status` y `git diff --cached` antes de confirmar los cambios.
+- [ ] Se hayan abierto las capturas de pantalla y los registros después de redactarlos para comprobar que no haya filtraciones.
 
-## Directory layout
+## Estructura de directorios
 
 ```text
 evidencias/
@@ -41,40 +42,40 @@ evidencias/
 └── video/                     # Video link and timestamp template
 ```
 
-## Required artifacts
+## Artefactos obligatorios
 
-| Artifact | Location | Requirement |
+| Artefacto | Ubicación | Requisito |
 |---|---|---|
-| Team and individual evidence | `roles/I1/` … `roles/I6/` | One folder per assigned role, based on `roles/PLANTILLA.md`. |
-| F01-F16 integration matrix | `matriz-verificacion.md` | Every row has a real command or pytest reference and observed result before submission. |
-| Real Telegram send evidence | `telegram/` | Redacted screenshot or JSON showing `ok: true`, plus date and command. No token or chat ID. |
-| Video and timestamps | `video/` | Real recording link and topic timestamps. No placeholder URL presented as final. |
-| AI-assistance declaration | Course submission document | State where AI assistance was used and what the team reviewed. |
-| Cleanup evidence | `ejecuciones/` or `capturas/` | Show `docker compose down` or equivalent approved cleanup and final state. |
+| Evidencias del equipo e individuales | `roles/I1/` … `roles/I6/` | Una carpeta por cada rol asignado, basada en `roles/PLANTILLA.md`. |
+| Matriz de integración F01-F16 | `matriz-verificacion.md` | Antes de la entrega, cada fila debe incluir un comando real o una referencia de pytest y el resultado observado. |
+| Evidencia de envío real por Telegram | `telegram/` | Captura redactada o JSON que muestre `ok: true`, además de la fecha y el comando. Sin token ni ID de chat. |
+| Video y marcas de tiempo | `video/` | Enlace a una grabación real y marcas de tiempo de los temas. No presentes como final una URL de marcador de posición. |
+| Declaración de asistencia de IA | Documento de entrega del curso | Indica dónde se utilizó asistencia de IA y qué revisó el equipo. |
+| Evidencia de limpieza | `ejecuciones/` o `capturas/` | Muestra `docker compose down` o una limpieza aprobada equivalente y el estado final. |
 
-## How to capture evidence
+## Cómo recopilar evidencias
 
-Run all commands from the repository root and save output with `tee` so the log
-is both visible and stored.
+Ejecuta todos los comandos desde la raíz del repositorio y guarda la salida con
+`tee` para que el registro sea visible y quede almacenado.
 
-### Start the local emulator
+### Iniciar el emulador local
 
 ```bash
 docker compose up -d localstack
 ```
 
-Only use the course-approved LocalStack image and authorization configuration.
+Usa únicamente la imagen y la configuración de autorización de LocalStack aprobadas para el curso.
 
-### Offline tests
+### Pruebas sin conexión
 
 ```bash
 ./.venv/bin/python -m pytest -m "not integracion" -q | tee evidencias/ejecuciones/YYYY-MM-DD_offline-tests.log
 ```
 
-### Opt-in integration tests
+### Pruebas de integración con activación explícita
 
-Obtain course approval first, prepare the approved emulator, then export the
-opt-in variables for that shell only:
+Primero obtén la aprobación del equipo docente y prepara el emulador aprobado; luego
+exporta las variables de activación solo para esa terminal:
 
 ```bash
 FENIX_CATEDRA_APPROVED=1 FENIX_RUN_LOCALSTACK=1 \
@@ -82,51 +83,53 @@ FENIX_CATEDRA_APPROVED=1 FENIX_RUN_LOCALSTACK=1 \
   | tee evidencias/ejecuciones/YYYY-MM-DD_F01-integration.log
 ```
 
-Do not write these variables into a committed file.
+No escribas estas variables en un archivo que se vaya a confirmar.
 
-### Queue and DLQ inspection
+### Inspección de cola y DLQ
 
 ```bash
 ./.venv/bin/python scripts/check_dlq.py | tee evidencias/ejecuciones/YYYY-MM-DD_F08-dlq-inspection.log
 ```
 
-The script is read-only. `--peek` reads one DLQ message with
-`VisibilityTimeout=0` and never deletes it; it prints only safe message metadata
-such as body length and receive count, never the message body or message ID.
+El script es de solo lectura. `--peek` lee un mensaje de la DLQ con
+`VisibilityTimeout=0` y nunca lo elimina; solo imprime metadatos seguros del
+mensaje, como la longitud del cuerpo y el número de recepciones, nunca el cuerpo
+ni el ID del mensaje.
 
-### Resource inspection
+### Inspección de recursos
 
 ```bash
 ./.venv/bin/python scripts/inspect_resources.py | tee evidencias/ejecuciones/YYYY-MM-DD_F01-resource-inspection.log
 ```
 
-The script is read-only and compares the inventory with S3, EC2, and security
-group ownership tags.
+El script es de solo lectura y compara el inventario con las etiquetas de
+pertenencia de S3, EC2 y los grupos de seguridad.
 
-### Sanitize before committing
+### Redactar antes de confirmar los cambios
 
-1. Open the saved log or screenshot.
-2. Redact secrets, tokens, chat IDs, receipt handles, and personal data with
+1. Abre el registro guardado o la captura de pantalla.
+2. Redacta los secretos, tokens, ID de chat, identificadores de recepción y datos personales con
    `<redacted>`.
-3. Save the sanitized copy under the correct directory.
-4. Run `git status` and inspect the staged diff.
-5. Commit only sanitized evidence.
+3. Guarda la copia redactada en el directorio correcto.
+4. Ejecuta `git status` e inspecciona los cambios preparados.
+5. Confirma únicamente evidencias redactadas.
 
-## Naming convention
+## Convención de nombres
 
-Use the same base name for a scenario across formats.
+Usa el mismo nombre base para un escenario en todos los formatos.
 
-| Artifact | Pattern | Example |
+| Artefacto | Patrón | Ejemplo |
 |---|---|---|
-| Command log | `YYYY-MM-DD_Fxx_short-name.log` | `2026-11-21_F01-queue-setup.log` |
-| Screenshot | `YYYY-MM-DD_Fxx_short-name.png` | `2026-11-21_F01-queue-setup.png` |
-| Telegram evidence | `YYYY-MM-DD_F02_telegram-ok.png` | `2026-11-21_F02_telegram-ok.png` |
+| Registro de comando | `YYYY-MM-DD_Fxx_short-name.log` | `2026-11-21_F01-queue-setup.log` |
+| Captura de pantalla | `YYYY-MM-DD_Fxx_short-name.png` | `2026-11-21_F01-queue-setup.png` |
+| Evidencia de Telegram | `YYYY-MM-DD_F02_telegram-ok.png` | `2026-11-21_F02_telegram-ok.png` |
 
-Use lowercase words separated by hyphens. Include the F-code when the artifact
-maps to one matrix row; use `offline-tests` or `cleanup` when it maps to several.
+Usa palabras en minúscula separadas por guiones. Incluye el código F cuando el
+artefacto corresponda a una fila de la matriz; usa `offline-tests` o `cleanup`
+cuando corresponda a varias.
 
-## Related documents
+## Documentos relacionados
 
-- [Verification matrix](matriz-verificacion.md)
-- [Role evidence template](roles/PLANTILLA.md)
-- [Role guide](roles/README.md)
+- [Matriz de verificación](matriz-verificacion.md)
+- [Plantilla de evidencias por rol](roles/PLANTILLA.md)
+- [Guía de roles](roles/README.md)

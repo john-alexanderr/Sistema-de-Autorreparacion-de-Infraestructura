@@ -1,40 +1,40 @@
-# Screenshots
+# Capturas de pantalla
 
-This directory stores redacted screenshots that support the verification
-matrix and role evidence.
+Este directorio almacena capturas de pantalla redactadas que respaldan la matriz
+de verificación y las evidencias de los roles.
 
-## Naming convention
+## Convención de nombres
 
 ```text
 YYYY-MM-DD_Fxx_short-name.png
 ```
 
-Examples:
+Ejemplos:
 
 - `2026-11-21_F01-queue-attributes.png`
 - `2026-11-21_F08-dlq-message.png`
 - `2026-11-21_F02-ec2-running.png`
 
-Use lowercase words separated by hyphens. Include the F-code when the image
-maps to one row.
+Usa palabras en minúscula separadas por guiones. Incluye el código F cuando la
+imagen corresponda a una fila.
 
-## Screenshot index
+## Índice de capturas de pantalla
 
-Keep a short index so a reviewer can find each artifact. Add entries only for
-real screenshots.
+Mantén un índice breve para que quien revise pueda encontrar cada artefacto.
+Agrega entradas únicamente para capturas de pantalla reales.
 
-| Date | F-code | What it shows | File | Sanitized |
+| Fecha | Código F | Qué muestra | Archivo | Redactada |
 |---|---|---|---|---|
 | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` |
 
-## Redaction checklist
+## Lista de control de redacción
 
-- [ ] No `.env` window, terminal history, or environment dump is visible.
-- [ ] No bot token, chat ID, webhook secret, AWS key, or LocalStack token.
-- [ ] No receipt handle is visible.
-- [ ] No private URL, email address, phone number, or personal data.
-- [ ] Cropped or redacted with `<redacted>` where needed.
-- [ ] The screenshot was reopened after editing to confirm nothing leaked.
+- [ ] No se vea ninguna ventana de `.env`, historial de terminal ni volcado del entorno.
+- [ ] No aparezcan tokens de bots, ID de chat, secretos de webhook, claves de AWS ni tokens de LocalStack.
+- [ ] No se vea ningún identificador de recepción.
+- [ ] No aparezcan URL privadas, correos electrónicos, números de teléfono ni datos personales.
+- [ ] Se haya recortado o redactado con `<redacted>` cuando sea necesario.
+- [ ] Se haya vuelto a abrir la captura después de editarla para comprobar que no haya filtraciones.
 
-Prefer a terminal screenshot with only the command and its sanitized output over
-a full desktop capture.
+Prefiere una captura de terminal que muestre únicamente el comando y su salida
+redactada, en lugar de una captura de todo el escritorio.

@@ -1,4 +1,4 @@
-"""Authenticated FastAPI webhook that accepts events only after SQS confirms them."""
+"""Webhook autenticado de FastAPI que acepta eventos solo después de que SQS los confirma."""
 
 import json
 import logging
@@ -56,7 +56,7 @@ def _enqueue(event: dict) -> tuple[str, str]:
 
 @app.post("/webhook", status_code=202)
 async def webhook(request: Request) -> dict:
-    """Authenticate raw request bytes, validate the event, and publish it once."""
+    """Autentica los bytes sin procesar de la solicitud, valida el evento y lo publica una vez."""
     started_at = time.perf_counter()
     raw = await request.body()
     if len(raw) > 16_384:

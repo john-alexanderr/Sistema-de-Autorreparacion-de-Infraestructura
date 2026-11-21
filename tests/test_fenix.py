@@ -1,4 +1,4 @@
-"""Offline HMAC and FastAPI request-boundary tests."""
+"""Pruebas sin conexión de HMAC y de los límites de solicitudes de FastAPI."""
 
 import asyncio
 import json

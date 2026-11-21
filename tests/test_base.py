@@ -9,11 +9,11 @@ from fenix.services.sqs import publish
 def test_state_survives_restart(tmp_path):
     """Comprueba dos escrituras y una nueva lectura del estado.
 
-    Args:
+    Argumentos:
         tmp_path: Carpeta temporal aislada provista por pytest.
-    Returns:
+    Devuelve:
         None si se conserva el último valor.
-    Raises:
+    Errores:
         AssertionError: Si se pierde información persistida.
     """
     path = str(tmp_path / "state.json")  # No usa datos reales del grupo.
@@ -26,11 +26,11 @@ def test_state_survives_restart(tmp_path):
 def test_corrupt_state_is_not_empty(tmp_path):
     """Evita que un JSON roto se trate como estado inicial.
 
-    Args:
+    Argumentos:
         tmp_path: Carpeta temporal aislada de pytest.
-    Returns:
+    Devuelve:
         None si la corrupción produce un error visible.
-    Raises:
+    Errores:
         AssertionError: Si se oculta la corrupción.
     """
     path = tmp_path / "broken.json"  # Construye una ruta de ensayo.
@@ -42,9 +42,9 @@ def test_corrupt_state_is_not_empty(tmp_path):
 def test_delay_is_bounded():
     """Rechaza un delay de más de quince minutos antes de conectar con SQS.
 
-    Returns:
+    Devuelve:
         None si se aplica el límite del servicio.
-    Raises:
+    Errores:
         AssertionError: Si se intenta aceptar un retardo inválido.
     """
     with pytest.raises(ValueError):  # Esta prueba no necesita Docker.
@@ -54,12 +54,12 @@ def test_delay_is_bounded():
 def test_json_log_context(tmp_path, monkeypatch):
     """Verifica el contexto de correlación y el cierre de QueueListener.
 
-    Args:
+    Argumentos:
         tmp_path: Carpeta donde guardar el log de prueba.
         monkeypatch: Fixture que restaura el directorio después del ensayo.
-    Returns:
+    Devuelve:
         None si cada línea es JSON y conserva event_id.
-    Raises:
+    Errores:
         AssertionError: Si falta correlación o fecha con zona UTC.
     """
     monkeypatch.chdir(tmp_path)  # Aísla los logs del ensayo.

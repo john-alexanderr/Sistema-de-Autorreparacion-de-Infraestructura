@@ -7,14 +7,14 @@ import os  # Publica archivos mediante reemplazo atómico.
 def load(path: str) -> dict:
     """Carga estado persistente sin ocultar corrupción.
 
-    Args:
+    Argumentos:
         path: Archivo JSON dentro de data/.
-    Returns:
+    Devuelve:
         Diccionario guardado o {} si todavía no existe.
-    Raises:
+    Errores:
         JSONDecodeError: Si el archivo existe y está corrupto.
         OSError: Si faltan permisos u ocurre un error de disco.
-    Notes:
+    Notas:
         JSON corrupto detiene la operación; no se supone estado vacío.
     """
     target = Path(path)  # Mantiene el acceso dentro del archivo seleccionado.
@@ -26,17 +26,17 @@ def load(path: str) -> dict:
 def save(path: str, data: dict) -> None:
     """Reemplaza un estado completo de forma atómica en el mismo directorio.
 
-    Args:
+    Argumentos:
         path: Archivo de destino dentro de data/.
         data: Diccionario serializable; no incluir secretos.
-    Returns:
+    Devuelve:
         None.
-    Raises:
+    Errores:
         OSError: Si no puede escribirse o reemplazarse el archivo.
         TypeError: Si data no es serializable.
-    Side Effects:
+    Efectos secundarios:
         Crea el directorio y reemplaza el archivo mediante os.replace.
-    Notes:
+    Notas:
         No proporciona bloqueo entre procesos ni transacciones con AWS.
     """
     target = Path(path)  # Debe ser una ruta elegida por la aplicación.

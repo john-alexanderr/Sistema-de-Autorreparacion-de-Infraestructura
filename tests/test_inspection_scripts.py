@@ -1,4 +1,4 @@
-"""Output-safety contracts for the read-only inspection scripts."""
+"""Contratos de seguridad de salida para los scripts de inspección de solo lectura."""
 
 import json
 from pathlib import Path

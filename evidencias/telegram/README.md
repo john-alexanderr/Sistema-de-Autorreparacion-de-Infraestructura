@@ -1,11 +1,12 @@
-# Telegram evidence
+# Evidencia de Telegram
 
-This directory is reserved for proof that a real Telegram notification was sent
-by the Fénix flow. Mocked tests do not count as real Telegram evidence.
+Este directorio está reservado para demostrar que el flujo de Fénix envió una
+notificación real por Telegram. Las pruebas simuladas no cuentan como evidencia
+de Telegram real.
 
-## Automated redacted capture
+## Captura automatizada con datos redactados
 
-Set the following in the gitignored `.env` file (never commit it):
+Define lo siguiente en el archivo `.env`, ignorado por el control de versiones (nunca lo confirmes):
 
 ```text
 NOTIFY_PROVIDER=telegram
@@ -13,53 +14,68 @@ TELEGRAM_BOT_TOKEN=<bot token>
 TELEGRAM_CHAT_ID=<chat id>
 ```
 
-Validate the configuration without sending:
+Valida la configuración sin enviar ningún mensaje:
 
 ```bash
 ./.venv/bin/python scripts/telegram_evidence.py --dry-run
 ```
 
-Send one real message and write the sanitized evidence:
+Envía un mensaje real y guarda la evidencia redactada:
 
 ```bash
 ./.venv/bin/python scripts/telegram_evidence.py
 ```
 
-The script uses the production `fenix.services.notifications.notify` adapter. It
-writes a minimal JSON confirmation in this directory with the provider, status,
-`"ok": true`, and UTC timestamp. Output is restricted to this repository
-directory. The Telegram message ID, sent text, credentials, chat ID, and Bot API
-URL are not stored or printed.
+El script usa el adaptador de producción `fenix.services.notifications.notify`.
+Escribe en este directorio una confirmación JSON mínima que contiene el
+proveedor, el estado, `"ok": true` y una marca de tiempo UTC. La salida se limita
+a este directorio del repositorio. El ID del mensaje de Telegram, el texto
+enviado, las credenciales, el ID del chat y la URL de Telegram Bot API no se guardan
+ni se imprimen.
 
-## Required evidence
+## Evidencia obligatoria
 
-The sanitized confirmation file is sufficient; do not attach a screenshot or raw
-API response. Record only:
+El archivo de confirmación redactado es suficiente; no adjuntes una captura de
+pantalla ni la respuesta sin procesar de la API. Registra únicamente:
 
-- The date of the real send.
-- The command or flow that triggered it.
-- The generic confirmation status that `ok: true`.
+- La fecha del envío real.
+- El comando o flujo que lo activó.
+- El estado de confirmación genérico `ok: true`.
 
-## Never include
+## Elementos que nunca deben incluirse
 
-- `TELEGRAM_BOT_TOKEN` or any bot token.
-- `TELEGRAM_CHAT_ID` or any private chat identifier.
-- The bot API URL containing the token.
-- Telegram message IDs or message text/body.
-- Private chat links, usernames, phone numbers, or personal data.
-- Screenshots or response bodies that reveal message content or identifiers.
+- `TELEGRAM_BOT_TOKEN` ni ningún token de bot.
+- `TELEGRAM_CHAT_ID` ni ningún identificador de chat privado.
+- La URL de Telegram Bot API que incluya el token.
+- Los ID de mensajes de Telegram ni el texto o cuerpo del mensaje.
+- Enlaces a chats privados, nombres de usuario, números de teléfono ni datos personales.
+- Capturas de pantalla o cuerpos de respuesta que revelen el contenido o los identificadores del mensaje.
 
-## Template
+## Evidencia capturada
 
-| Field | Value |
+| Campo | Valor |
 |---|---|
-| Date | `[PENDING: YYYY-MM-DD]` |
-| Trigger command or flow | `[PENDING]` |
-| Evidence file | `[PENDING: relative path under evidencias/telegram/]` |
-| Confirmation status | `[PENDING: sent; ok=true]` |
-| Message ID or text recorded | `No` |
-| Sanitized by | `[PENDING]` |
+| Fecha | `2026-11-21T06:01:38Z` |
+| Comando que lo activó | `./.venv/bin/python scripts/telegram_evidence.py` |
+| Archivo de evidencia | `telegram/2026-11-21T060138Z_a9b1da_F02_telegram-evidence.json` |
+| Confirmación | `"ok": true` |
+| ¿Se registró el ID o el texto del mensaje? | `No` |
+| Redactado por | Script automatizado; revisión humana pendiente |
 
-The script creates a timestamped JSON confirmation in this directory.
-Placeholders stay until the real send happens; never add message IDs or content
-to the evidence filename.
+La confirmación fue producida por un envío real y no contiene token, chat ID,
+URL de Telegram Bot API, ID de mensaje ni texto del mensaje.
+
+## Plantilla
+
+| Campo | Valor |
+|---|---|
+| Fecha | `[PENDING: YYYY-MM-DD]` |
+| Comando o flujo que lo activó | `[PENDING]` |
+| Archivo de evidencia | `[PENDING: ruta relativa dentro de evidencias/telegram/]` |
+| Estado de confirmación | `[PENDING: enviado; ok=true]` |
+| ¿Se registró el ID o el texto del mensaje? | `No` |
+| Persona que redactó los datos | `[PENDING]` |
+
+El script crea en este directorio una confirmación JSON con marca de tiempo.
+Mantén los marcadores de posición hasta que se realice el envío real; nunca
+incluyas ID ni contenido de mensajes en el nombre del archivo de evidencia.

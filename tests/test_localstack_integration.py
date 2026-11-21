@@ -1,4 +1,4 @@
-"""Opt-in LocalStack scenarios; never run without explicit course approval."""
+"""Escenarios de LocalStack con activación explícita; nunca ejecutar sin aprobación expresa de la cursada."""
 
 import asyncio
 import json

@@ -1,4 +1,4 @@
-"""AST guards for the course error-handling and cleanup rules."""
+"""Controles AST de las reglas de gestión de errores y limpieza de la cursada."""
 
 import ast
 from pathlib import Path
@@ -89,7 +89,7 @@ def _base_exception_handlers(tree: ast.Module) -> list[ast.ExceptHandler]:
 
 
 class _FinallyExitVisitor(ast.NodeVisitor):
-    """Find exits in a finally suite without crossing nested function scopes."""
+    """Busca salidas en un bloque finally sin atravesar ámbitos de funciones anidadas."""
 
     def __init__(self) -> None:
         self.exits: list[ast.Return | ast.Break | ast.Continue] = []

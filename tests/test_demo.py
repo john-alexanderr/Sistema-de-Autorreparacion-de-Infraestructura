@@ -1,4 +1,4 @@
-"""Offline provisioning checkpoint and LocalStack recovery tests."""
+"""Pruebas sin conexión de puntos de control de aprovisionamiento y recuperación de LocalStack."""
 
 from types import SimpleNamespace
 

@@ -1,4 +1,4 @@
-"""Offline worker, durable-ledger, Telegram, and retry scenario tests."""
+"""Pruebas sin conexión de escenarios del worker, el registro durable, Telegram y los reintentos."""
 
 import json
 import logging

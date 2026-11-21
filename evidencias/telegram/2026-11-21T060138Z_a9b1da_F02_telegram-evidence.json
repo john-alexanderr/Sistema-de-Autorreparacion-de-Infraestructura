@@ -1,0 +1,13 @@
+{
+  "captured_at_utc": "2026-11-21T06:01:38.869416Z",
+  "command": "./.venv/bin/python scripts/telegram_evidence.py",
+  "evidence_id": "F02",
+  "notes": [
+    "Confirmation is recorded without message IDs or sent text."
+  ],
+  "provider": "telegram",
+  "status": "sent",
+  "telegram_response": {
+    "ok": true
+  }
+}

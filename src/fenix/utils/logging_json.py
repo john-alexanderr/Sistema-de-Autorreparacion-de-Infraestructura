@@ -1,4 +1,4 @@
-"""Structured JSON logging with bounded rotating files and gzip archives."""
+"""Registro estructurado en JSON con archivos rotativos acotados y archivos gzip."""
 import gzip
 import json
 import logging
@@ -21,20 +21,20 @@ def _safe_message(message: str) -> str:
     return _HEX_DIGEST.sub("[REDACTED_SIGNATURE]", message)
 
 class JSONFormatter(logging.Formatter):
-    """Serialize only approved fields instead of copying the whole log record.
+    """Serializa únicamente los campos aprobados en lugar de copiar el registro completo.
 
-    Notes:
-        Each process writes to its own file to avoid concurrent rotation.
+    Notas:
+        Cada proceso escribe en su propio archivo para evitar la rotación concurrente.
     """
     def format(self, record: logging.LogRecord) -> str:
-        """Format a record as one JSON line with a UTC timestamp.
+        """Da formato a un registro como una línea JSON con marca de tiempo UTC.
 
-        Args:
-            record: Log record with optional public context fields.
-        Returns:
-            A JSON line containing the timestamp, level, message, and safe context.
-        Raises:
-            TypeError: If an approved context value is not JSON serializable.
+        Argumentos:
+            record: Registro con campos de contexto públicos opcionales.
+        Devuelve:
+            Una línea JSON con la marca de tiempo, el nivel, el mensaje y el contexto seguro.
+        Errores:
+            TypeError: Si un valor de contexto aprobado no se puede serializar como JSON.
         """
         data = {"timestamp": datetime.fromtimestamp(record.created, timezone.utc).isoformat(),
                 "level": record.levelname, "message": _safe_message(record.getMessage()),
@@ -53,28 +53,28 @@ class JSONFormatter(logging.Formatter):
 
 
 def gzip_name(name: str) -> str:
-    """Return a gzip archive name for a rotated log file.
+    """Devuelve el nombre de un archivo gzip para un registro rotado.
 
-    Args:
-        name: Archive name proposed by RotatingFileHandler.
-    Returns:
-        The proposed name with a .gz suffix.
+    Argumentos:
+        name: Nombre de archivo propuesto por RotatingFileHandler.
+    Devuelve:
+        El nombre propuesto con el sufijo .gz.
     """
     return name + ".gz"
 
 
 def gzip_rotate(source: str, dest: str) -> None:
-    """Compress a closed archive and remove its uncompressed source.
+    """Comprime un archivo cerrado y elimina su origen sin comprimir.
 
-    Args:
-        source: Archive file closed by the rotating handler.
-        dest: Destination path for the gzip archive.
-    Returns:
+    Argumentos:
+        source: Archivo cerrado por el controlador de rotación.
+        dest: Ruta de destino del archivo gzip.
+    Devuelve:
         None.
-    Raises:
-        OSError: If reading, compression, or source removal fails.
-    Notes:
-        Gzip publication is not atomic in this implementation.
+    Errores:
+        OSError: Si falla la lectura, la compresión o la eliminación del archivo de origen.
+    Notas:
+        En esta implementación, la publicación del archivo gzip no es atómica.
     """
     with open(source, "rb") as origin, gzip.open(dest, "wb") as target:
         shutil.copyfileobj(origin, target)
@@ -86,18 +86,18 @@ def setup(
     max_bytes: int = 2 * 1024 * 1024,
     backup_count: int = 3,
 ) -> tuple[logging.Logger, QueueListener]:
-    """Start a JSON logging pipeline backed by a process-specific file.
+    """Inicia un flujo de registro JSON respaldado por un archivo específico del proceso.
 
-    Args:
-        name: Public component name, such as fenix-worker.
-        max_bytes: Rotation threshold; configurable for deterministic tests.
-        backup_count: Number of compressed archives to retain.
-    Returns:
-        Logger and listener; the caller must execute listener.stop in cleanup.
-    Raises:
-        OSError: If the logs directory or file cannot be created.
-    Side Effects:
-        Starts a listener thread and opens a rotating file handler; call once per process.
+    Argumentos:
+        name: Nombre público del componente, por ejemplo fenix-worker.
+        max_bytes: Umbral de rotación; configurable para pruebas deterministas.
+        backup_count: Cantidad de archivos comprimidos que se conservarán.
+    Devuelve:
+        El logger y el listener; quien realiza la llamada debe ejecutar listener.stop durante la limpieza.
+    Errores:
+        OSError: Si no se puede crear el directorio o el archivo de registros.
+    Efectos secundarios:
+        Inicia un hilo listener y abre un controlador de archivos rotativos; se debe llamar una vez por proceso.
     """
     if type(max_bytes) is not int or max_bytes < 1:
         raise ValueError("max_bytes must be a positive integer")

@@ -1,43 +1,44 @@
-# Role evidence guide
+# Guía de evidencias por rol
 
-The course defines six roles, labeled I1 through I6. This repository does not
-assign names, emails, or ownership to any role. Do not invent a person, a
-sign-off, or a role assignment. Fill those fields only from the approved course
-guide.
+El curso define seis roles, identificados como I1 a I6. Este repositorio no
+asigna nombres, correos electrónicos ni responsabilidades a ningún rol. No
+inventes una persona, una aprobación ni una asignación de rol. Completa esos
+campos únicamente a partir de la guía aprobada del curso.
 
-| Role | Module focus | Evidence focus |
+| Rol | Enfoque del módulo | Enfoque de las evidencias |
 |---|---|---|
-| I1 Entradas y Excepciones | `receiver.py`, `events.py`, validation, and signature handling | Signed-input rejection and HTTP error evidence (F04-F07, F13). |
-| I2 Mensajería e Inventario Cloud | `sqs.py`, `demo.py`, and settings | Queue/DLQ behavior, group-owned inventory, and reconciliation evidence (F01, F08, F10). |
-| I3 Webhooks y Reparación | `receiver.py` and `remediation.py` | Webhook acceptance and verified EC2/S3 remediation (F02-F07). |
-| I4 Observabilidad y Comunicación | `notifications.py` and `logging_json.py` | Telegram delivery/retry evidence and redacted rotating logs (F02, F14, F16). |
-| I5 Integración y Worker | `worker.py`, `state.py`, and `sqs.py` | Durable processing, visibility retries, recovery, and acknowledgment (F08-F12). |
-| I6 Pruebas y Diagnóstico | Test reports mapped to the verification matrix | Offline versus integration evidence for F01-F16. |
+| I1 Entradas y Excepciones | `receiver.py`, `events.py`, validación y gestión de firmas | Evidencia de rechazo de entradas firmadas y errores HTTP (F04-F07, F13). |
+| I2 Mensajería e Inventario Cloud | `sqs.py`, `demo.py` y configuración | Comportamiento de la cola/DLQ, inventario propiedad del grupo y evidencias de conciliación (F01, F08, F10). |
+| I3 Webhooks y Reparación | `receiver.py` y `remediation.py` | Aceptación de webhooks y remediación verificada de EC2/S3 (F02-F07). |
+| I4 Observabilidad y Comunicación | `notifications.py` y `logging_json.py` | Evidencias de entrega y reintentos de Telegram, y registros rotativos redactados (F02, F14, F16). |
+| I5 Integración y Worker | `worker.py`, `state.py` y `sqs.py` | Procesamiento durable, reintentos mediante cambios del tiempo de visibilidad en SQS, recuperación y confirmación (F08-F12). |
+| I6 Pruebas y Diagnóstico | Informes de pruebas vinculados con la matriz de verificación | Evidencias sin conexión y de integración para F01-F16. |
 
-## Folder rules
+## Reglas de carpetas
 
-1. Create `I1/` through `I6/` only when the course assigns the role. Empty
-   folders for unassigned roles add noise and imply an assignment that does not
-   exist.
-2. Copy `PLANTILLA.md` into each assigned folder and rename it after the role,
-   for example `I2/evidencia.md`.
-3. Keep personal data minimal. A role label and an institutional identifier are
-   enough; do not commit national IDs, addresses, phone numbers, or private
-   emails unless the course explicitly requires them.
-4. Each role keeps its own commands, observed results, screenshots, log paths,
-   defense explanation, AI-assistance declaration, and sign-off.
-5. Do not copy another role's evidence into your folder. Reference the shared
-   artifact in `ejecuciones/` or `capturas/` and explain your part.
+1. Crea `I1/` a `I6/` únicamente cuando el curso asigne el rol. Las carpetas
+   vacías para roles sin asignar agregan ruido e implican una asignación que no
+   existe.
+2. Copia `PLANTILLA.md` en cada carpeta asignada y cambia el nombre del archivo
+   según el rol; por ejemplo, `I2/evidencia.md`.
+3. Limita al mínimo los datos personales. Basta con la etiqueta del rol y un
+   identificador institucional; no confirmes documentos de identidad, domicilios,
+   teléfonos ni correos privados, salvo que el curso los exija explícitamente.
+4. Cada rol conserva sus propios comandos, resultados observados, capturas de
+   pantalla, rutas de registros, explicación para la defensa, declaración de
+   asistencia de IA y aprobación.
+5. No copies en tu carpeta las evidencias de otro rol. Haz referencia al
+   artefacto compartido en `ejecuciones/` o `capturas/` y explica tu aporte.
 
-## Defense notes
+## Notas para la defensa
 
-Every role must be able to explain:
+Cada rol debe poder explicar:
 
-- Which module and verification rows the role owns.
-- Which commands or tests were actually run and what they observed.
-- Why the design is fail-closed or read-only where the assignment requires it.
-- What AI assistance produced and what the role owner personally reviewed.
-- Which evidence is offline-only and which required the approved emulator.
+- Qué módulo y filas de verificación corresponden al rol.
+- Qué comandos o pruebas se ejecutaron realmente y qué resultados se observaron.
+- Por qué el diseño deniega por defecto ante fallos o funciona en modo de solo lectura cuando así lo exige la consigna.
+- Qué produjo la asistencia de IA y qué revisó personalmente la persona responsable del rol.
+- Qué evidencias son exclusivamente sin conexión y cuáles requirieron el emulador aprobado.
 
-Use [PLANTILLA.md](PLANTILLA.md) as the starting point. Return to the
-[evidence index](../README.md) for redaction and capture rules.
+Usa [PLANTILLA.md](PLANTILLA.md) como punto de partida. Consulta el
+[índice de evidencias](../README.md) para conocer las reglas de redacción y recopilación.

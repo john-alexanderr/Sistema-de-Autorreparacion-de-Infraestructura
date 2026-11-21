@@ -1,4 +1,4 @@
-"""Timestamped HMAC-SHA256 signing and verification."""
+"""Firma y verificación HMAC-SHA256 con marca de tiempo."""
 
 import hashlib
 import hmac
@@ -17,7 +17,7 @@ def _digest(secret: str, timestamp_bytes: bytes, body: bytes) -> str:
 
 
 def signature(secret: str, timestamp: int, body: bytes) -> str:
-    """Sign the decimal timestamp, a dot, and the exact body bytes."""
+    """Firma la marca de tiempo decimal, un punto y los bytes exactos del cuerpo."""
     if not isinstance(secret, str) or len(secret) < 16:
         raise ValidationError("WEBHOOK_SECRET must contain at least 16 characters")
     if type(timestamp) is not int or timestamp < 0 or not isinstance(body, bytes):
@@ -26,7 +26,7 @@ def signature(secret: str, timestamp: int, body: bytes) -> str:
 
 
 def verify(secret: str, header: str, body: bytes, now: int | None = None) -> None:
-    """Verify the exact header syntax, timestamp window, and HMAC securely."""
+    """Verifica de forma segura la sintaxis exacta del encabezado, la ventana de tiempo y el HMAC."""
     if not isinstance(secret, str) or len(secret) < 16:
         raise ValidationError("Webhook signature is invalid")
     if not isinstance(header, str) or not isinstance(body, bytes):

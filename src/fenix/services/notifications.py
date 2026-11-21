@@ -1,4 +1,4 @@
-"""Telegram Bot API adapter; console output is development-only."""
+"""Adaptador de la API de Bot de Telegram; la salida por consola es solo para desarrollo."""
 
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -30,10 +30,11 @@ def _retry_after(value: str | None) -> int | None:
 
 
 def notify(text: str, *, return_result: bool = False) -> dict | None:
-    """Send one Telegram message and classify the response for SQS retry.
+    """Envía un mensaje de Telegram y clasifica la respuesta para los reintentos de SQS.
 
-    The default return value stays ``None`` for existing callers. Evidence
-    tooling can request generic confirmation metadata without message identifiers.
+    El valor de retorno predeterminado sigue siendo ``None`` para los llamadores
+    existentes. Las herramientas de evidencia pueden solicitar metadatos
+    genéricos de confirmación, sin identificadores del mensaje.
     """
     mode = os.getenv("NOTIFY_PROVIDER", "console")
     message = text[:1000] if isinstance(text, str) else ""

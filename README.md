@@ -1,37 +1,37 @@
-# Fénix: local infrastructure self-repair
+# Fénix: autorreparación local de infraestructura
 
-Fénix receives authenticated infrastructure events, validates them against a group-owned inventory, repairs one authorized LocalStack resource, records progress, and sends a Telegram notification. It is a course lab, not an exactly-once or production cloud controller.
+Fénix recibe eventos de infraestructura autenticados, los valida frente a un inventario propiedad del grupo, repara un recurso autorizado de LocalStack, registra el progreso y envía una notificación por Telegram. Es un laboratorio académico, no un controlador de nube de producción ni un sistema con garantía de procesamiento exactamente una vez.
 
-## Team and course responsibilities
+## Responsabilidades del equipo y del curso
 
-The course approved a two-person team-size exception. It did not waive any role, evidence, review, or defense requirement. Team member names, email addresses, and responsible-person assignments remain pending; the exception did not define how the six roles are allocated.
+El equipo docente aprobó una excepción para equipos de dos personas. Esto no exime de ningún requisito de roles, evidencias, revisión o defensa. Los nombres y correos electrónicos de integrantes, así como las asignaciones de responsables, siguen pendientes; la excepción no definió cómo se distribuyen los seis roles.
 
-| Team member | Email | Status |
+| Integrante del equipo | Correo electrónico | Estado |
 |---|---|---|
-| `[Pending: member 1 name]` | `[Pending: member 1 email]` | Not assigned in this repository |
-| `[Pending: member 2 name]` | `[Pending: member 2 email]` | Not assigned in this repository |
+| `[Pending: nombre del integrante 1]` | `[Pending: correo del integrante 1]` | Sin asignar en este repositorio |
+| `[Pending: nombre del integrante 2]` | `[Pending: correo del integrante 2]` | Sin asignar en este repositorio |
 
-| Required course role | Module focus and evidence summary | Responsible person |
+| Rol obligatorio del curso | Enfoque del módulo y resumen de evidencias | Persona responsable |
 |---|---|---|
-| I1 Entradas y Excepciones | `receiver.py`, `events.py`, validation, and signature handling; signed-input rejection and HTTP error evidence (F04–F07, F13). | `[Pending assignment]` |
-| I2 Mensajería e Inventario Cloud | `sqs.py`, `demo.py`, and settings; queue/DLQ behavior, group-owned inventory, and reconciliation evidence (F01, F08, F10). | `[Pending assignment]` |
-| I3 Webhooks y Reparación | Webhook acceptance and verified EC2/S3 remediation in `receiver.py` and `remediation.py` (F02–F07). | `[Pending assignment]` |
-| I4 Observabilidad y Comunicación | Telegram delivery/retry evidence and redacted rotating logs in `notifications.py` and `logging_json.py` (F02, F14, F16). | `[Pending assignment]` |
-| I5 Integración y Worker | Durable processing, visibility retries, recovery, and acknowledgment in `worker.py`, `state.py`, and `sqs.py` (F08–F12). | `[Pending assignment]` |
-| I6 Pruebas y Diagnóstico | Test reports and diagnostic evidence mapped to the verification matrix (F01–F16), distinguishing offline results from pending integrations. | `[Pending assignment]` |
+| I1 Entradas y Excepciones | `receiver.py`, `events.py`, validación y gestión de firmas; rechazo de entradas firmadas y evidencia de errores HTTP (F04–F07, F13). | `[Pending: asignación]` |
+| I2 Mensajería e Inventario Cloud | `sqs.py`, `demo.py` y configuración; comportamiento de la cola/DLQ, inventario propiedad del grupo y evidencias de conciliación (F01, F08, F10). | `[Pending: asignación]` |
+| I3 Webhooks y Reparación | Aceptación de webhooks y remediación verificada de EC2/S3 en `receiver.py` y `remediation.py` (F02–F07). | `[Pending: asignación]` |
+| I4 Observabilidad y Comunicación | Evidencias de entrega y reintentos de Telegram, y registros rotativos con datos redactados en `notifications.py` y `logging_json.py` (F02, F14, F16). | `[Pending: asignación]` |
+| I5 Integración y Worker | Procesamiento durable, reintentos mediante cambios del tiempo de visibilidad en SQS, recuperación y confirmación en `worker.py`, `state.py` y `sqs.py` (F08–F12). | `[Pending: asignación]` |
+| I6 Pruebas y Diagnóstico | Informes de pruebas y evidencias de diagnóstico vinculados con la matriz de verificación (F01–F16), diferenciando los resultados sin conexión de las integraciones pendientes. | `[Pending: asignación]` |
 
-## Prerequisites
+## Requisitos previos
 
-- Python 3.12.3 is the selected project team target and is verified in this checkout's `.venv`. The second team member must use Python 3.12.3 too; their environment has not yet been verified. `pyproject.toml` keeps `requires-python = ">=3.11"` because the course permits newer versions and the metadata retains a compatibility floor rather than pinning the team target.
-- Docker Desktop with its WSL2 engine, Docker Compose, and the course-approved LocalStack image and authorization configuration.
-- A Telegram bot and chat configured by the team outside source control. Never paste credentials into issues, chat, screenshots, or this README.
-- The approved course guide and resource naming rules.
+- Python 3.12.3 es la versión objetivo seleccionada por el equipo del proyecto y está verificada en el entorno `.venv` de esta copia. La segunda persona del equipo también debe usar Python 3.12.3; su entorno todavía no se verificó. `pyproject.toml` mantiene `requires-python = ">=3.11"` porque el curso permite versiones más recientes y los metadatos conservan una versión mínima de compatibilidad, en lugar de fijar la versión objetivo del equipo.
+- Docker Desktop con su motor WSL2, Docker Compose y la imagen y configuración de autorización de LocalStack aprobadas para el curso.
+- Un bot y un chat de Telegram configurados por el equipo fuera del control de versiones. Nunca pegues credenciales en incidencias, chats, capturas de pantalla ni en este README.
+- La guía aprobada del curso y las reglas para nombrar recursos.
 
-`requirements.txt` declares the direct dependencies; `requirements-lock.txt` records the package versions installed in the verified Python 3.12.3 `.venv`, including a portable editable-project entry (`-e .`). The lockfile does not use a machine-specific path. Both team members must use the selected Python version; confirm the second member's interpreter before treating the team environment as aligned. Do not use an unapproved LocalStack image or copy a sample authorization token into a shared artifact. The AWS SDK client rejects endpoints other than loopback port 4566 and requires dummy LocalStack credentials supplied through the environment.
+`requirements.txt` declara las dependencias directas; `requirements-lock.txt` registra las versiones de paquetes instaladas en el entorno `.venv` verificado con Python 3.12.3, incluida una referencia portable al proyecto editable (`-e .`). El archivo de bloqueo no usa una ruta específica de una máquina. Ambas personas del equipo deben usar la versión seleccionada de Python; confirma el intérprete de la segunda persona antes de considerar alineados los entornos del equipo. No uses una imagen de LocalStack no aprobada ni copies un token de autorización de ejemplo en un artefacto compartido. El cliente del SDK de AWS rechaza los endpoints que no sean el puerto de loopback 4566 y requiere credenciales ficticias de LocalStack proporcionadas mediante el entorno.
 
-## Install from a clean checkout
+## Instalación desde una copia limpia
 
-1. Create and activate a virtual environment:
+1. Crea y activa un entorno virtual:
 
    ```bash
    python3.12 -m venv .venv
@@ -40,40 +40,37 @@ The course approved a two-person team-size exception. It did not waive any role,
    python -m pip install -r requirements-lock.txt
    ```
 
-2. Create the ignored local environment file and enter only cátedra-approved local settings:
+2. Crea el archivo local de entorno, que está ignorado por el control de versiones, e introduce solo la configuración local aprobada para el curso:
 
    ```bash
    cp .env.example .env
    ```
 
-   Required or supported variable names are `AWS_ENDPOINT_URL`, `AWS_DEFAULT_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `GROUP_ID`, `QUEUE_PREFIX`, `WEBHOOK_SECRET`, `NOTIFY_PROVIDER`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `LOCALSTACK_IMAGE`, and `LOCALSTACK_AUTH_TOKEN`. Set both `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to exactly `test`; other values are rejected. Never use real AWS credentials; the client passes these values explicitly to Boto3 and does not use AWS profiles or credential chains. No values are documented here.
+    Los nombres de variables obligatorios o admitidos son `AWS_ENDPOINT_URL`, `AWS_DEFAULT_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `GROUP_ID`, `QUEUE_PREFIX`, `WEBHOOK_SECRET`, `NOTIFY_PROVIDER`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `LOCALSTACK_IMAGE` y `LOCALSTACK_AUTH_TOKEN`. Define tanto `AWS_ACCESS_KEY_ID` como `AWS_SECRET_ACCESS_KEY` exactamente en `test`; se rechazan otros valores. Nunca uses credenciales reales de AWS; el cliente proporciona explícitamente estos valores a Boto3 y no usa perfiles ni cadenas de credenciales de AWS. Aquí no se documenta ningún valor.
 
-3. After the course-approved image and token have been confirmed, start the local emulator:
+3. Después de confirmar la imagen y el token aprobados para el curso, inicia el emulador local:
 
    ```bash
    docker compose up -d localstack
    ```
 
-4. Initialize queues and the group's tagged demo resources:
+4. Inicializa las colas y los recursos de demostración etiquetados del grupo:
 
    ```bash
    python -m fenix.cli init-queues
    python -m fenix.cli setup-demo
    ```
 
-5. Start the receiver and worker in separate terminals:
+5. Inicia el receptor y el worker en terminales separados:
 
    ```bash
    uvicorn fenix.services.receiver:app --host 127.0.0.1 --port 8000
    python -m fenix.cli worker
    ```
 
-These commands describe the manual setup workflow. The latest opt-in pytest
-integration run did call the approved local LocalStack endpoint; the setup
-commands above are not themselves evidence of that run. No AWS or live Telegram
-calls occurred.
+Estos comandos describen el flujo de configuración manual. La ejecución más reciente de integración con pytest y activación explícita sí llamó al endpoint local aprobado de LocalStack; los comandos de configuración anteriores no constituyen evidencia de esa ejecución. No se realizaron llamadas a AWS. La evidencia redactada de un envío real a Telegram está en `evidencias/telegram/2026-11-21T060138Z_a9b1da_F02_telegram-evidence.json`.
 
-## Event flow
+## Flujo de eventos
 
 ```mermaid
 flowchart LR
@@ -91,15 +88,15 @@ flowchart LR
     Q -->|maxReceiveCount reached| D[(SQS dead-letter queue)]
 ```
 
-## Webhook contract
+## Contrato del webhook
 
-The receiver accepts `POST /webhook` with the exact header shape below. The signature is HMAC-SHA256 over the ASCII timestamp bytes, a period, and the original body bytes. The timestamp must be within 300 seconds. Duplicate or ambiguous signature headers are rejected before JSON parsing.
+El receptor acepta `POST /webhook` con el formato exacto de encabezado que aparece a continuación. La firma es HMAC-SHA256 sobre los bytes ASCII de la marca de tiempo, un punto y los bytes originales del cuerpo. La marca de tiempo debe estar dentro de un intervalo de 300 segundos. Los encabezados de firma duplicados o ambiguos se rechazan antes de analizar el JSON.
 
 ```text
 X-Webhook-Signature: t=<epoch>,v1=<64 hexadecimal characters>
 ```
 
-The body is limited to 16 KiB and is a closed JSON object with exactly these fields:
+El cuerpo está limitado a 16 KiB y debe ser un objeto JSON cerrado con exactamente estos campos:
 
 ```json
 {
@@ -112,24 +109,24 @@ The body is limited to 16 KiB and is a closed JSON object with exactly these fie
 }
 ```
 
-`event_id` and `resource_id` must match `[a-z0-9-]{3,32}`. The only event types are `instance.stopped` for `node-01` and `bucket.tags_missing` for `bucket-01`. `simulate_failures` is an integer from 0 through 5; booleans are invalid. Timestamps must explicitly be UTC (`Z` or `+00:00`). Resource identifiers and cloud destinations cannot be supplied in the request.
+`event_id` y `resource_id` deben coincidir con `[a-z0-9-]{3,32}`. Los únicos tipos de evento son `instance.stopped` para `node-01` y `bucket.tags_missing` para `bucket-01`. `simulate_failures` es un entero entre 0 y 5; los valores booleanos no son válidos. Las marcas de tiempo deben indicar explícitamente UTC (`Z` o `+00:00`). La solicitud no puede incluir identificadores de recursos ni destinos de nube.
 
-| HTTP status | Meaning |
+| Estado HTTP | Significado |
 |---|---|
-| `202` | SQS confirmed the send; body contains `status`, `event_id`, and `message_id`. |
-| `400` | Signed body is not valid UTF-8 or JSON. |
-| `401` | Signature missing, malformed, duplicated, invalid, or outside the time window. |
-| `413` | Body exceeds 16 KiB. |
-| `422` | JSON is valid but violates the event or inventory contract. |
-| `503` | Inventory or SQS is unavailable; the receiver does not claim acceptance. |
+| `202` | SQS confirmó el envío; el cuerpo contiene `status`, `event_id` y `message_id`. |
+| `400` | El cuerpo firmado no es UTF-8 o JSON válido. |
+| `401` | La firma falta, está mal formada, duplicada, no es válida o está fuera de la ventana de tiempo. |
+| `413` | El cuerpo supera los 16 KiB. |
+| `422` | El JSON es válido, pero incumple el contrato del evento o del inventario. |
+| `503` | El inventario o SQS no están disponibles; el receptor no afirma haber aceptado el evento. |
 
-## Resource inventory
+## Inventario de recursos
 
-`data/inventory.json` is keyed by the event aliases. Each resource stores its cloud identifier under the single canonical `id` key; webhook events continue to contain only `node-01` or `bucket-01` in `resource_id`.
+`data/inventory.json` usa como claves los alias de evento. Cada recurso guarda su identificador de nube bajo la única clave canónica `id`; los eventos del webhook siguen incluyendo únicamente `node-01` o `bucket-01` en `resource_id`.
 
-The inventory below is a synthetic documentation example only. Its aliases,
-group and tag values, and cloud identifiers are illustrative—not actual account
-or resource values.
+El inventario siguiente es solo un ejemplo sintético de documentación. Sus alias,
+valores de grupo y etiquetas e identificadores de nube son ilustrativos; no son
+valores reales de cuentas ni de recursos.
 
 ```json
 {
@@ -162,18 +159,18 @@ or resource values.
 }
 ```
 
-The setup command may also store provisioning metadata such as `group_id`, `status`, the EC2 `image_id` and `client_token`, and `security_group_expected_tags`. The receiver resolves the alias against this inventory and does not accept a cloud identifier in the webhook.
+El comando de configuración también puede guardar metadatos de aprovisionamiento como `group_id`, `status`, `image_id` y `client_token` de EC2, y `security_group_expected_tags`. El receptor resuelve el alias mediante este inventario y no acepta un identificador de nube en el webhook.
 
-## Single-writer and LocalStack recovery
+## Escritor único y recuperación de LocalStack
 
-Run only one process that writes to a given `data/` directory. State files are atomically replaced, but the project does not provide cross-process locking or transactions. Stop the worker before running a CLI operation or making a manual edit that changes a manifest. Never delete `data/` while resources owned by its inventory still exist; the inventory is the ownership record needed for safe reconciliation.
+Ejecuta un solo proceso que escriba en un directorio `data/` determinado. Los archivos de estado se reemplazan de forma atómica, pero el proyecto no proporciona bloqueo entre procesos ni transacciones. Detén el worker antes de ejecutar una operación de CLI o hacer una edición manual que modifique un manifiesto. Nunca elimines `data/` mientras sigan existiendo recursos propiedad del inventario; el inventario es el registro de pertenencia necesario para una conciliación segura.
 
-After an approved LocalStack reset, treat every previously saved cloud ID as stale:
+Después de un reinicio aprobado de LocalStack, considera obsoletos todos los ID de nube guardados previamente:
 
-1. Stop the Fénix worker and any other process that can write to `data/`. Keep `data/` intact.
-2. Reset and restart only the course-approved LocalStack environment, following the cátedra procedure. Do not use real AWS credentials or delete the Fénix inventory as a reset shortcut.
-3. Reconcile with `python -m fenix.cli setup-demo`. Setup re-queries the security group and instance by group ownership tags and, when available, the prior EC2 `ClientToken` (including the stable legacy token); it does not use a saved instance or security-group ID as proof of ownership. If the old mock image is no longer available, setup selects a currently available mock image and does not reuse an idempotency token with changed launch parameters. The selected image and token are saved before launch, and the returned canonical instance ID is saved before the later verification call. Existing resources are adopted only after their ownership tags are verified.
-4. Verify the reconciled inventory against Boto3 before starting the worker:
+1. Detén el worker de Fénix y cualquier otro proceso que pueda escribir en `data/`. Conserva `data/` intacto.
+2. Reinicia únicamente el entorno de LocalStack aprobado para el curso, siguiendo el procedimiento establecido. No uses credenciales reales de AWS ni elimines el inventario de Fénix como atajo para reiniciar.
+3. Concilia con `python -m fenix.cli setup-demo`. La configuración vuelve a consultar el grupo de seguridad y la instancia mediante las etiquetas de pertenencia del grupo y, cuando está disponible, el `ClientToken` anterior de EC2 (incluido el token heredado estable); no usa un ID guardado de instancia o grupo de seguridad como prueba de pertenencia. Si la imagen mock anterior ya no está disponible, la configuración selecciona una imagen mock disponible y no reutiliza un token de idempotencia con parámetros de lanzamiento distintos. La imagen y el token seleccionados se guardan antes del lanzamiento, y el ID canónico devuelto para la instancia se guarda antes de la llamada posterior de verificación. Los recursos existentes solo se adoptan después de verificar sus etiquetas de pertenencia.
+4. Verifica con Boto3 el inventario conciliado antes de iniciar el worker:
 
    ```bash
    python - <<'PY'
@@ -217,109 +214,105 @@ After an approved LocalStack reset, treat every previously saved cloud ID as sta
    PY
    ```
 
-`cloud_support.create_instance` is used after the image/token checkpoint; `setup-demo` persists its returned ID and performs the final read-back checks. The other recipes are intentionally not used for the full resource flows: `create_group` does not reconcile duplicate names against ownership tags, `create_bucket` combines creation and tagging so it cannot preserve the pre-create and post-create checkpoints, and `mock_inputs` does not filter for currently available mock images. The setup path keeps its direct, ownership-checked EC2/S3 sequence where those checkpoints are required.
+`cloud_support.create_instance` se usa después del punto de control de imagen y token; `setup-demo` conserva el ID devuelto y realiza las verificaciones finales mediante una nueva lectura. Las otras recetas no se usan intencionalmente para los flujos completos de recursos: `create_group` no concilia nombres duplicados con las etiquetas de pertenencia, `create_bucket` combina la creación y el etiquetado, por lo que no puede conservar los puntos de control anteriores y posteriores a la creación, y `mock_inputs` no filtra las imágenes mock disponibles en ese momento. El flujo de configuración mantiene la secuencia directa de EC2/S3 con verificación de pertenencia cuando se requieren esos puntos de control.
 
-## Observed webhook latency
+## Latencia observada del webhook
 
-After SQS confirms publication, the receiver logs `latency_ms`, measured with a monotonic clock from request-handler entry through the confirmed send. This is an observed value, not a hard `<100 ms` success target. Record the real measurement and its evidence during the approved LocalStack run; no LocalStack latency measurement is claimed in this repository.
+Después de que SQS confirma la publicación, el receptor registra `latency_ms`, medido con un reloj monotónico desde la entrada al controlador de solicitudes hasta la confirmación del envío. Es un valor observado, no un objetivo estricto de éxito de `<100 ms`. Registra la medición real y su evidencia durante la ejecución aprobada de LocalStack; este repositorio no afirma contar con una medición de latencia de LocalStack.
 
-## CLI and fault scenarios
+## CLI y escenarios de fallos
 
-| Command | Purpose |
+| Comando | Propósito |
 |---|---|
-| `python -m fenix.cli init-queues` | Ensure the standard work queue and DLQ exist and reconcile their attributes. |
-| `python -m fenix.cli setup-demo` | Reconcile the current group's tagged EC2 and S3 resources, record the selected mock image ID, and save `data/inventory.json`. |
-| `python -m fenix.cli fault node-01` | Stop only the inventory-owned EC2 instance. |
-| `python -m fenix.cli fault bucket-01` | Remove only the inventory-owned bucket's `Owner` tag. |
-| `python -m fenix.cli send examples/node-event.json` | Sign the exact file bytes and send the webhook request. |
-| `python -m fenix.cli worker --once` | Poll once and process at most one received batch; useful for controlled verification. |
-| `python -m fenix.cli worker` | Run the worker until interrupted with Ctrl+C. |
+| `python -m fenix.cli init-queues` | Asegurar que existan la cola estándar de trabajo y la DLQ, y conciliar sus atributos. |
+| `python -m fenix.cli setup-demo` | Conciliar los recursos EC2 y S3 etiquetados del grupo actual, registrar el ID de la imagen mock seleccionada y guardar `data/inventory.json`. |
+| `python -m fenix.cli fault node-01` | Detener únicamente la instancia EC2 propiedad del inventario. |
+| `python -m fenix.cli fault bucket-01` | Quitar únicamente la etiqueta `Owner` del bucket propiedad del inventario. |
+| `python -m fenix.cli send examples/node-event.json` | Firmar los bytes exactos del archivo y enviar la solicitud al webhook. |
+| `python -m fenix.cli worker --once` | Consultar una vez y procesar como máximo un lote recibido; es útil para una verificación controlada. |
+| `python -m fenix.cli worker` | Ejecutar el worker hasta interrumpirlo con Ctrl+C. |
 
-The console notification adapter is development-only. Final course evidence requires the Telegram adapter and a redacted confirmation artifact; no real Telegram request was made for this implementation.
+El adaptador de notificaciones por consola es solo para desarrollo. La evidencia redactada de un envío real con el adaptador de Telegram quedó capturada en `evidencias/telegram/2026-11-21T060138Z_a9b1da_F02_telegram-evidence.json`; no incluye el token, el ID del chat ni el contenido del mensaje.
 
-## Retry, DLQ, and idempotency decisions
+## Decisiones sobre reintentos, DLQ e idempotencia
 
-- Queue type is standard, with a 45-second visibility timeout, 10-second long polling, one message per receive, and `maxReceiveCount=3` on the redrive policy.
-- On failure, the worker retains the original message and changes visibility using its current receipt handle. Delays are `min(30, 2 ** ApproximateReceiveCount)`; Telegram `Retry-After` can raise the delay, capped at 30 seconds. The worker never republishes a retry.
-- A poison message is not acknowledged. SQS, not an application retry loop, moves it to the DLQ after the configured receives. No exact wall-clock deadline is promised.
-- `data/events.json` is atomically replaced and stores the event content, attempt count, repair stage/result, notification state, status, and conflicting content. A repeated `event_id` with different content preserves the first content, records the conflict, performs no repair for the conflicting event, and remains unacknowledged for DLQ handling.
-- Completed repair and notification stages are resumed rather than repeated when their state is durable. A crash after a provider accepts a notification but before the ledger records it can still cause a duplicate. JSON, cloud APIs, Telegram, and SQS do not share a transaction; exactly-once processing is not claimed.
-- EC2 repair starts only a stopped instance, never reboots it, and verifies `running`. S3 repair merges expected tags, preserves unrelated tags, writes only after ownership checks, and reads the tags back for verification.
+- El tipo de cola es estándar, con un tiempo de visibilidad de 45 segundos, sondeo prolongado de 10 segundos, un mensaje por recepción y `maxReceiveCount=3` en la política de redirección.
+- Ante un fallo, el worker conserva el mensaje original y cambia su visibilidad usando el identificador de recepción vigente. Los retrasos son `min(30, 2 ** ApproximateReceiveCount)`; `Retry-After` de Telegram puede aumentar el retraso, con un máximo de 30 segundos. El worker nunca vuelve a publicar un reintento.
+- Un mensaje problemático no se confirma. SQS, no un bucle de reintentos de la aplicación, lo mueve a la DLQ después de las recepciones configuradas. No se garantiza un plazo exacto de reloj.
+- `data/events.json` se reemplaza de forma atómica y almacena el contenido del evento, el número de intentos, la etapa y el resultado de la reparación, el estado de la notificación, el estado general y el contenido en conflicto. Si se repite un `event_id` con contenido distinto, se conserva el primer contenido, se registra el conflicto, no se repara el evento en conflicto y este queda sin confirmar para que SQS lo gestione mediante la DLQ.
+- Las etapas de reparación y notificación completadas se reanudan en vez de repetirse cuando su estado es durable. Un fallo después de que un proveedor acepte una notificación, pero antes de que el registro la guarde, todavía puede producir un duplicado. JSON, las API de nube, Telegram y SQS no comparten una transacción; no se afirma que el procesamiento sea exactamente una vez.
+- La reparación de EC2 solo inicia una instancia detenida, nunca la reinicia y verifica que esté `running`. La reparación de S3 combina las etiquetas esperadas, conserva las no relacionadas, escribe solo después de comprobar la pertenencia y vuelve a leer las etiquetas para verificarlas.
 
-## Verification matrix
+## Matriz de verificación
 
-The current snapshot records separate offline and opt-in LocalStack invocations.
-The offline suite passed 77 tests, and the opt-in LocalStack suite passed all
-six integration scenarios. No AWS or live Telegram calls occurred. See the
-[final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log)
-for sanitized commands and results.
+La instantánea actual registra por separado las ejecuciones sin conexión y las ejecuciones de LocalStack con activación explícita.
+El conjunto de pruebas sin conexión aprobó 77 pruebas y el conjunto de LocalStack con activación explícita aprobó los seis escenarios de integración. No se realizaron llamadas a AWS ni a Telegram en vivo. Consulta el
+[registro final de verificación](evidencias/ejecuciones/2026-11-21_final-verification.log)
+para ver los comandos y resultados con datos redactados.
 
-### Verified snapshot
+### Instantánea verificada
 
-- Environment: Python 3.12.3 in `.venv`; selected and verified project team target. The second member's environment remains to be confirmed.
-- Offline command: `./.venv/bin/python -m pytest -m "not integracion" -q` — **77 passed, 6 `integracion` tests deselected in 1.30s**.
-- Opt-in LocalStack command: `./.venv/bin/python -m pytest -m "integracion" -q --tb=short` — **6 passed, 77 deselected in 46.60s**. This was a separate invocation using the approved LocalStack setup and per-process course opt-in.
-- `./.venv/bin/python -m pip check` reported `No broken requirements found.`; `git diff --check` passed.
-- The local import-source assertion passed for the current checkout.
-- No AWS or live Telegram calls occurred; F02 used a mocked Telegram transport.
-- A scan found no Python `TODO` or `NotImplementedError` placeholders.
+- Entorno: Python 3.12.3 en `.venv`; versión objetivo del equipo seleccionada y verificada. Falta confirmar el entorno de la segunda persona.
+- Comando sin conexión: `./.venv/bin/python -m pytest -m "not integracion" -q` — **77 passed, 6 `integracion` tests deselected in 1.30s**.
+- Comando de LocalStack con activación explícita: `./.venv/bin/python -m pytest -m "integracion" -q --tb=short` — **6 passed, 77 deselected in 46.60s**. Fue una ejecución independiente con la configuración de LocalStack aprobada y la activación del curso para ese proceso.
+- `./.venv/bin/python -m pip check` informó `No broken requirements found.`; `git diff --check` se aprobó.
+- Se aprobó la aserción de origen de importaciones locales para la copia actual.
+- No se realizaron llamadas a AWS ni a Telegram en vivo; F02 usó un transporte de Telegram simulado.
+- Un análisis no encontró marcadores `TODO` ni `NotImplementedError` en Python.
 
-The 77 passing offline tests include repository compliance guards, explicit
-local-credential configuration checks, CLI boundary/raw-byte tests, queued-log
-flush coverage, Telegram retry handling, crash-window recovery, worker
-ACK/visibility `ClientError` handling, setup inventory checkpoints, reset
-reconciliation, and rejection of non-dummy AWS credentials. The opt-in
-LocalStack suite passed F01, F02, F03, F08, F10, and the LocalStack portion of
-F13. Real Telegram, individual role, and course-defense evidence remain pending.
+Las 77 pruebas sin conexión aprobadas incluyen controles de cumplimiento del repositorio, comprobaciones explícitas de configuración de credenciales locales, pruebas de límites de CLI y bytes sin procesar, cobertura del vaciado de registros en cola, gestión de reintentos de Telegram, recuperación de ventanas de fallo, gestión de `ClientError` de ACK/visibilidad del worker, puntos de control del inventario de configuración, conciliación tras reinicios y rechazo de credenciales de AWS no ficticias. El conjunto de LocalStack con activación explícita aprobó F01, F02, F03, F08, F10 y la parte de F13 correspondiente a LocalStack. La evidencia del envío real a Telegram está capturada en `evidencias/telegram/2026-11-21T060138Z_a9b1da_F02_telegram-evidence.json`; las evidencias de cada rol y de la defensa del curso siguen pendientes.
 
-`tests/test_compliance.py` checks the assignment's prohibited exception/finally patterns; `tests/test_cli.py` checks early argument rejection, exact signed-file bytes, and listener cleanup; `tests/test_logging.py` verifies queued records flush on listener stop. The opt-in F01 integration test checks that the work queue targets the configured DLQ, uses `maxReceiveCount=3`, and that the DLQ has no nested redrive policy; it passed in the latest integration run.
+`tests/test_compliance.py` comprueba los patrones de excepciones y bloques `finally` prohibidos por la consigna; `tests/test_cli.py` comprueba el rechazo anticipado de argumentos, los bytes exactos del archivo firmado y la limpieza del listener; `tests/test_logging.py` verifica que los registros en cola se vacíen al detener el listener. La prueba de integración F01 con activación explícita comprueba que la cola de trabajo apunte a la DLQ configurada, use `maxReceiveCount=3` y que la DLQ no tenga una política de redirección anidada; se aprobó en la ejecución de integración más reciente.
 
-| ID | Date | Command / pytest test | Anonymized input | Expected | Observed | Evidence | Responsible |
+| ID | Fecha | Comando / prueba de pytest | Entrada anonimizada | Resultado esperado | Resultado observado | Evidencia | Responsable |
 |---|---|---|---|---|---|---|---|
-| F01 | 2026-11-21 | `test_localstack_integration.py::test_f01_queue_and_demo_setup_are_idempotent` | Unique `it-*` group; run queue/demo setup twice. | One owned resource set; work queue targets the DLQ; `maxReceiveCount=3`; no nested DLQ redrive policy. | PASS: repeated setup reused the same resources; queue redrive verified. | [Final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending assignment]` |
-| F02 | 2026-11-21 | `test_localstack_integration.py::test_f02_verified_ec2_repair_durable_ledger_mocked_telegram_and_real_ack` | Synthetic `evt-node-001` for alias `node-01`. | EC2 `running` verified; ledger complete; mocked Telegram success; current SQS receipt acknowledged. | PASS: EC2 running, ledger complete, mocked Telegram success, and current SQS receipt acknowledged. Real Telegram evidence remains pending. | [Final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending assignment]` |
-| F03 | 2026-11-21 | `test_localstack_integration.py::test_f03_bucket_repair_preserves_unrelated_tags` | Synthetic `bucket-01` with missing `Owner` and an unrelated tag. | Restore required tags and preserve unrelated tags. | PASS: required `Owner` restored; unrelated `Department` tag preserved. | [Final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending assignment]` |
-| F04 | 2026-11-19 | `test_fenix.py::test_signature_failures_return_401_without_publishing` | Synthetic body with missing, malformed, stale, or invalid signature. | HTTP 401 and no SQS publish. | PASS in offline suite. | `[Attach sanitized pytest output]` | `[Pending assignment]` |
-| F05 | 2026-11-19 | `test_fenix.py::test_signature_authenticates_raw_bytes_and_rejects_ambiguous_headers` | Same JSON value serialized to different raw bytes after signing. | HMAC fails; HTTP 401 and no publish. | PASS in offline suite. | `[Attach sanitized pytest output]` | `[Pending assignment]` |
-| F06 | 2026-11-19 | `test_fenix.py::test_signed_invalid_json_is_400_and_signed_list_is_422` | Signed malformed JSON and signed JSON array. | HTTP 400 and 422 respectively; no publish. | PASS in offline suite. | `[Attach sanitized pytest output]` | `[Pending assignment]` |
-| F07 | 2026-11-19 | `test_fenix.py::test_bad_alias_and_extra_event_fields_return_422_without_publish` | Synthetic unknown alias and event with an extra key. | HTTP 422; no cloud operation. | PASS in offline suite. | `[Attach sanitized pytest output]` | `[Pending assignment]` |
-| F08 | 2026-11-21 | `test_localstack_integration.py::test_f08_corrupt_direct_sqs_message_reaches_real_dlq_without_stopping_worker` | Corrupt synthetic message published directly to the work queue. | Worker continues; original message reaches the real DLQ. | PASS: corrupt body reached the real DLQ; worker continued. | [Final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending assignment]` |
-| F09 | 2026-11-19 | `test_scenarios.py::test_simulated_failures_persist_across_attempts_then_complete` | Synthetic event with `simulate_failures=2`. | Persist attempts; visibility backoff; complete on the third execution. | PASS in offline suite; real SQS timing remains unverified. | `[Attach sanitized pytest output and ledger excerpt]` | `[Pending assignment]` |
-| F10 | 2026-11-21 | `test_localstack_integration.py::test_f10_persistent_handler_failure_reaches_real_dlq_without_ack` | Synthetic event with `simulate_failures=5`. | No repair or ACK; SQS moves the message to the real DLQ. | PASS: persistent failure reached the real DLQ without ACK or repair. | [Final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending assignment]` |
-| F11 | 2026-11-19 | `test_scenarios.py::test_duplicate_after_restart_does_not_repeat_completed_stages` | Repeat a completed synthetic event after reloading its ledger. | No repeated repair or notification. | PASS in offline suite. | `[Attach sanitized pytest output and ledger excerpt]` | `[Pending assignment]` |
-| F12 | 2026-11-19 | `test_scenarios.py::test_restart_after_repair_resumes_notification_only`; `test_repair_converges_when_ledger_checkpoint_save_fails` | Synthetic repair followed by notification/checkpoint failure. | Resume notification only; if the repair checkpoint fails, re-query and converge without repeating EC2 start. | PASS in offline suite. | `[Attach sanitized pytest output and ledger excerpt]` | `[Pending assignment]` |
-| F13 | 2026-11-21 | `test_localstack_integration.py::test_f13_missing_local_queue_returns_503_without_acceptance`; `test_fenix.py::test_sqs_failure_returns_503_without_false_acceptance` | Valid synthetic event with a missing local queue and a mocked unavailable queue. | HTTP 503; no false acceptance. | PASS: LocalStack missing-queue and offline mocked failure both returned 503 without acceptance. | [Final verification log](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending assignment]` |
-| F14 | 2026-11-19 | `test_scenarios.py::test_f14_rate_limit_and_timeout_resume_notification_without_repair_repeat`; `test_telegram_5xx_retry_after_is_propagated_and_bounded` | Mocked Telegram 429, timeout, and 5xx with `Retry-After`. | Retry notification only; bounded wait; do not repeat confirmed repair. | PASS in offline suite; real Telegram evidence pending. | `[Attach sanitized pytest output]` | `[Pending assignment]` |
-| F15 | 2026-11-19 | `test_scenarios.py::test_conflicting_event_id_preserves_first_content_and_never_repairs_again` | Same synthetic event ID with different content. | Preserve original ledger; record conflict; do not repair conflicting event. | PASS in offline suite. | `[Attach sanitized pytest output and conflict ledger excerpt]` | `[Pending assignment]` |
-| F16 | 2026-11-19 | `test_logging.py::test_small_threshold_rotates_to_readable_gzip_json_without_secrets` | Synthetic JSON log messages with small rotation threshold. | Readable gzip JSONL, UTC context, redacted secrets. | PASS in offline suite. | `[Attach sanitized pytest output and redacted log excerpts]` | `[Pending assignment]` |
+| F01 | 2026-11-21 | `test_localstack_integration.py::test_f01_queue_and_demo_setup_are_idempotent` | Grupo `it-*` único; ejecutar dos veces la configuración de cola y demostración. | Un conjunto de recursos propios; la cola de trabajo apunta a la DLQ; `maxReceiveCount=3`; sin política de redirección anidada en la DLQ. | PASS: la configuración repetida reutilizó los mismos recursos; se verificó la redirección de la cola. | [Registro final de verificación](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending: asignación]` |
+| F02 | 2026-11-21 | `test_localstack_integration.py::test_f02_verified_ec2_repair_durable_ledger_mocked_telegram_and_real_ack` | Evento sintético `evt-node-001` para el alias `node-01`. | Se verificó EC2 en estado `running`; registro completo; envío simulado correcto por Telegram; recepción vigente de SQS confirmada. | PASS: EC2 en estado running, registro completo, envío simulado correcto por Telegram y recepción vigente de SQS confirmada. El envío real quedó registrado por separado. | [Registro final de verificación](evidencias/ejecuciones/2026-11-21_final-verification.log); [Evidencia de Telegram](evidencias/telegram/2026-11-21T060138Z_a9b1da_F02_telegram-evidence.json) | `[Pending: asignación]` |
+| F03 | 2026-11-21 | `test_localstack_integration.py::test_f03_bucket_repair_preserves_unrelated_tags` | `bucket-01` sintético con la etiqueta `Owner` ausente y una etiqueta no relacionada. | Restaurar las etiquetas requeridas y conservar las no relacionadas. | PASS: se restauró `Owner` y se conservó la etiqueta no relacionada `Department`. | [Registro final de verificación](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending: asignación]` |
+| F04 | 2026-11-19 | `test_fenix.py::test_signature_failures_return_401_without_publishing` | Cuerpo sintético con firma ausente, mal formada, vencida o no válida. | HTTP 401 y ningún envío a SQS. | PASS en el conjunto de pruebas sin conexión. | `[Adjuntar salida de pytest redactada]` | `[Pending: asignación]` |
+| F05 | 2026-11-19 | `test_fenix.py::test_signature_authenticates_raw_bytes_and_rejects_ambiguous_headers` | El mismo valor JSON serializado en bytes sin procesar distintos después de firmarlo. | Falla HMAC; HTTP 401 y ningún envío. | PASS en el conjunto de pruebas sin conexión. | `[Adjuntar salida de pytest redactada]` | `[Pending: asignación]` |
+| F06 | 2026-11-19 | `test_fenix.py::test_signed_invalid_json_is_400_and_signed_list_is_422` | JSON mal formado firmado y una lista JSON firmada. | HTTP 400 y 422, respectivamente; ningún envío. | PASS en el conjunto de pruebas sin conexión. | `[Adjuntar salida de pytest redactada]` | `[Pending: asignación]` |
+| F07 | 2026-11-19 | `test_fenix.py::test_bad_alias_and_extra_event_fields_return_422_without_publish` | Alias sintético desconocido y evento con una clave adicional. | HTTP 422; ninguna operación de nube. | PASS en el conjunto de pruebas sin conexión. | `[Adjuntar salida de pytest redactada]` | `[Pending: asignación]` |
+| F08 | 2026-11-21 | `test_localstack_integration.py::test_f08_corrupt_direct_sqs_message_reaches_real_dlq_without_stopping_worker` | Mensaje sintético corrupto publicado directamente en la cola de trabajo. | El worker continúa; el mensaje original llega a la DLQ real. | PASS: el cuerpo corrupto llegó a la DLQ real y el worker continuó. | [Registro final de verificación](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending: asignación]` |
+| F09 | 2026-11-19 | `test_scenarios.py::test_simulated_failures_persist_across_attempts_then_complete` | Evento sintético con `simulate_failures=2`. | Persistir los intentos; aplicar retroceso de visibilidad; completar en la tercera ejecución. | PASS en el conjunto de pruebas sin conexión; el tiempo real de SQS sigue sin verificarse. | `[Adjuntar salida de pytest redactada y extracto del registro]` | `[Pending: asignación]` |
+| F10 | 2026-11-21 | `test_localstack_integration.py::test_f10_persistent_handler_failure_reaches_real_dlq_without_ack` | Evento sintético con `simulate_failures=5`. | Sin reparación ni ACK; SQS mueve el mensaje a la DLQ real. | PASS: el fallo persistente llegó a la DLQ real sin ACK ni reparación. | [Registro final de verificación](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending: asignación]` |
+| F11 | 2026-11-19 | `test_scenarios.py::test_duplicate_after_restart_does_not_repeat_completed_stages` | Repetir un evento sintético completado después de volver a cargar su registro. | No repetir la reparación ni la notificación. | PASS en el conjunto de pruebas sin conexión. | `[Adjuntar salida de pytest redactada y extracto del registro]` | `[Pending: asignación]` |
+| F12 | 2026-11-19 | `test_scenarios.py::test_restart_after_repair_resumes_notification_only`; `test_repair_converges_when_ledger_checkpoint_save_fails` | Reparación sintética seguida de un fallo de notificación o de punto de control. | Reanudar solo la notificación; si falla el punto de control de reparación, volver a consultar y converger sin repetir el inicio de EC2. | PASS en el conjunto de pruebas sin conexión. | `[Adjuntar salida de pytest redactada y extracto del registro]` | `[Pending: asignación]` |
+| F13 | 2026-11-21 | `test_localstack_integration.py::test_f13_missing_local_queue_returns_503_without_acceptance`; `test_fenix.py::test_sqs_failure_returns_503_without_false_acceptance` | Evento sintético válido con una cola local ausente y una cola simulada no disponible. | HTTP 503; sin aceptación falsa. | PASS: tanto la cola ausente de LocalStack como el fallo simulado sin conexión devolvieron 503 sin aceptar el evento. | [Registro final de verificación](evidencias/ejecuciones/2026-11-21_final-verification.log) | `[Pending: asignación]` |
+| F14 | 2026-11-19 | `test_scenarios.py::test_f14_rate_limit_and_timeout_resume_notification_without_repair_repeat`; `test_telegram_5xx_retry_after_is_propagated_and_bounded` | Respuestas simuladas de Telegram 429, timeout y 5xx con `Retry-After`. | Reintentar solo la notificación; espera acotada; no repetir una reparación confirmada. | PASS en el conjunto de pruebas sin conexión; la confirmación de Telegram real está documentada por separado en F02. | `[Adjuntar salida de pytest redactada]` | `[Pending: asignación]` |
+| F15 | 2026-11-19 | `test_scenarios.py::test_conflicting_event_id_preserves_first_content_and_never_repairs_again` | El mismo ID de evento sintético con contenido distinto. | Conservar el registro original; registrar el conflicto; no reparar el evento en conflicto. | PASS en el conjunto de pruebas sin conexión. | `[Adjuntar salida de pytest redactada y extracto del registro de conflictos]` | `[Pending: asignación]` |
+| F16 | 2026-11-19 | `test_logging.py::test_small_threshold_rotates_to_readable_gzip_json_without_secrets` | Mensajes sintéticos de registro JSON con un umbral de rotación bajo. | JSONL gzip legible, contexto UTC y secretos redactados. | PASS en el conjunto de pruebas sin conexión. | `[Adjuntar salida de pytest redactada y extractos de registros redactados]` | `[Pending: asignación]` |
 
-To opt in to the integration tests, first obtain the course's approval and prepare the approved local emulator configuration, then set `FENIX_CATEDRA_APPROVED` and `FENIX_RUN_LOCALSTACK` in the test environment. The latest opt-in run passed all six integration scenarios. The tests create unique `it-...` group resources and clean up only resources whose ownership tags match that generated group. They do not send real Telegram messages.
+Para activar las pruebas de integración, primero obtén la aprobación del equipo docente y prepara la configuración aprobada del emulador local; luego define `FENIX_CATEDRA_APPROVED` y `FENIX_RUN_LOCALSTACK` en el entorno de pruebas. La ejecución más reciente con activación explícita aprobó los seis escenarios de integración. Las pruebas crean recursos para grupos únicos `it-...` y solo limpian los recursos cuyas etiquetas de pertenencia coinciden con el grupo generado. No envían mensajes reales por Telegram.
 
-## Limitations and cleanup
+## Limitaciones y limpieza
 
-- The ledger uses atomic file replacement, not a multi-service transaction, process lock, or exactly-once protocol. Run one worker process per project data directory.
-- Cloud remediation and queue behavior are constrained to loopback port 4566. No AWS account endpoint or credentials are supported.
-- Resource reconciliation depends on LocalStack EC2 mock image/VPC support and the course-approved emulator version; the approved local integration scenarios passed, but this does not verify behavior against real cloud services.
-- Telegram delivery is not transactional with the ledger; an uncertain HTTP result can produce a duplicate notice.
-- The application has no resource-destruction CLI. Stop the approved local lab with `docker compose down` after saving required evidence. Do not use cleanup commands against another group's endpoint or inventory.
+- El registro usa el reemplazo atómico de archivos, no una transacción entre servicios, un bloqueo de procesos ni un protocolo de procesamiento exactamente una vez. Ejecuta un solo proceso worker por directorio de datos del proyecto.
+- La remediación en la nube y el comportamiento de las colas se limitan al puerto de loopback 4566. No se admiten endpoints ni credenciales de cuentas de AWS.
+- La conciliación de recursos depende de la compatibilidad de LocalStack con imágenes mock y VPC de EC2, y de la versión del emulador aprobada para el curso; se aprobaron los escenarios locales de integración, pero esto no verifica el comportamiento con servicios de nube reales.
+- La entrega de Telegram no es transaccional con el registro; un resultado HTTP incierto puede producir una notificación duplicada.
+- La aplicación no tiene una CLI para destruir recursos. Detén el laboratorio local aprobado con `docker compose down` después de guardar las evidencias requeridas. No uses comandos de limpieza sobre el endpoint o inventario de otro grupo.
 
-## Required defense artifacts
+## Artefactos obligatorios para la defensa
 
-- Team member names, emails, responsible-person assignments, and completed role evidence: `[Pending: fill from the approved course guide and attach evidence]`.
-- Telegram evidence: `[Pending: attach redacted Bot API success evidence; never include the bot token or private chat credentials]`.
-- Video: `[Pending: link]`.
-- Video timestamps: `[Pending: timestamp — topic]`.
+- Nombres y correos electrónicos de integrantes, asignaciones de responsables y evidencias de roles completas: `[Pending: completar según la guía aprobada del curso y adjuntar evidencia]`.
+- Evidencia de Telegram: capturada en `evidencias/telegram/2026-11-21T060138Z_a9b1da_F02_telegram-evidence.json`; nunca incluir el token del bot ni el ID del chat.
+- Video: `[Pending: enlace]`.
+- Marcas de tiempo del video: `[Pending: marca de tiempo — tema]`.
 
-## AI assistance declaration
+## Declaración de asistencia de IA
 
-AI assistance was used to implement the validation, queue, LocalStack lab,
-webhook, remediation, Telegram, worker, ledger, and test/documentation changes.
-The local import-source assertion passed for the current checkout. The Python
-3.12.3 `.venv` offline run passed 77 tests with 6 integration tests deselected;
-a separate opt-in LocalStack invocation passed all 6 integration scenarios
-with 77 tests deselected. `pip check` and `git diff --check` also passed, and no
-Python TODO or NotImplementedError placeholders remain. No AWS or live Telegram
-calls occurred; F02 used a mocked Telegram transport. Real Telegram
-confirmation, course-defense artifacts, individual role evidence,
-responsible-person assignments, and video materials remain pending. The team
-must review and understand all changes before submission.
+Se utilizó asistencia de IA para implementar los cambios de validación, colas,
+laboratorio LocalStack, webhook, remediación, Telegram, worker, registro y
+pruebas/documentación. Se aprobó la aserción de origen de importaciones locales
+para la copia actual. La ejecución sin conexión en `.venv` con Python 3.12.3
+aprobó 77 pruebas y omitió 6 pruebas de integración; una ejecución independiente
+de LocalStack con activación explícita aprobó los 6 escenarios de integración y
+omitió 77 pruebas. También se aprobaron `pip check` y `git diff --check`, y no
+quedan marcadores `TODO` ni `NotImplementedError` en Python. No se realizaron
+llamadas a AWS; F02 usó un transporte de Telegram simulado en las pruebas. La
+evidencia redactada de un envío real a Telegram está capturada en
+`evidencias/telegram/2026-11-21T060138Z_a9b1da_F02_telegram-evidence.json`. Los
+artefactos de defensa del curso, las evidencias individuales de roles, las
+asignaciones de responsables y los materiales de video siguen pendientes. El
+equipo debe revisar y comprender todos los cambios antes de la entrega.

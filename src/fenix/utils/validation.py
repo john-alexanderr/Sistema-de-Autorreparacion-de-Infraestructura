@@ -1,4 +1,4 @@
-"""Strict validation helpers for the Fénix contracts."""
+"""Funciones auxiliares de validación estricta para los contratos de Fénix."""
 
 import re
 from datetime import datetime, timedelta, timezone
@@ -14,14 +14,14 @@ _UTC_TEXT = re.compile(
 
 
 def identifier(value: str) -> str:
-    """Return an unchanged identifier matching the project's closed format."""
+    """Devuelve sin cambios un identificador que coincida con el formato cerrado del proyecto."""
     if not isinstance(value, str) or _IDENTIFIER.fullmatch(value) is None:
         raise ValidationError("Identifier must contain 3-32 lowercase letters, digits, or hyphens")
     return value
 
 
 def ttl_seconds(value: str) -> int:
-    """Parse a decimal TTL in the inclusive range 60-600 seconds."""
+    """Interpreta un TTL decimal dentro del intervalo inclusivo de 60 a 600 segundos."""
     if not isinstance(value, str) or _DIGITS.fullmatch(value) is None:
         raise ValidationError("TTL must be an integer between 60 and 600 seconds")
     try:
@@ -34,7 +34,7 @@ def ttl_seconds(value: str) -> int:
 
 
 def utc_text(value: str) -> datetime:
-    """Parse an ISO-8601 timestamp that explicitly represents UTC."""
+    """Interpreta una marca de tiempo ISO-8601 que representa explícitamente UTC."""
     if not isinstance(value, str) or _UTC_TEXT.fullmatch(value) is None:
         raise ValidationError("Timestamp must be an ISO-8601 UTC string")
     normalized = value[:-1] + "+00:00" if value.endswith("Z") else value

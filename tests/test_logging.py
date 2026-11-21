@@ -1,4 +1,4 @@
-"""Rotation, gzip readability, UTC timestamps, and log redaction tests."""
+"""Pruebas de rotación, legibilidad de gzip, marcas de tiempo UTC y redacción de registros."""
 
 import gzip
 import json

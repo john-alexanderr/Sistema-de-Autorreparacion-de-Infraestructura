@@ -1,4 +1,4 @@
-"""Offline tests for Fénix command-line parsing, sending, and cleanup."""
+"""Pruebas sin conexión del análisis de argumentos, el envío y la limpieza de la CLI de Fénix."""
 
 import json
 from unittest.mock import Mock

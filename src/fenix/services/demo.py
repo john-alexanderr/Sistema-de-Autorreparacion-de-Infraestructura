@@ -1,4 +1,4 @@
-"""Create and safely reconcile the group's LocalStack lab resources."""
+"""Crea y concilia de forma segura los recursos de laboratorio de LocalStack del grupo."""
 
 import hashlib
 import time
@@ -82,7 +82,7 @@ def _valid_client_token(value: object) -> bool:
 
 
 def _client_token_filter_unsupported(error: ClientError) -> bool:
-    """Return True when the emulator does not implement the client-token filter."""
+    """Indica si el emulador no implementa el filtro de client-token."""
     details = error.response.get("Error", {})
     code = details.get("Code")
     message = details.get("Message") or str(error)
@@ -93,7 +93,7 @@ def _client_token_filter_unsupported(error: ClientError) -> bool:
 
 
 def _describe_by_client_token(ec2, token: str) -> dict | None:
-    """Query by client token, tolerating emulators that do not support the filter."""
+    """Consulta por client-token y admite emuladores que no admiten ese filtro."""
     try:
         return ec2.describe_instances(
             Filters=[{"Name": "client-token", "Values": [token]}]
@@ -231,7 +231,7 @@ def _ensure_bucket(s3, inventory: dict, group: str, bucket_name: str, tags: dict
 
 
 def setup_demo(group: str) -> dict:
-    """Create or reconcile one tagged EC2 instance and one tagged S3 bucket."""
+    """Crea o concilia una instancia EC2 etiquetada y un bucket S3 etiquetado."""
     identifier(group)
     inventory = _group_inventory(group)
     ec2 = client("ec2")
@@ -368,7 +368,7 @@ def setup_demo(group: str) -> dict:
 
 
 def inject_fault(alias: str) -> None:
-    """Apply one verified fault only to the resource recorded for this group."""
+    """Aplica un fallo verificado únicamente al recurso registrado para este grupo."""
     if not isinstance(alias, str) or alias not in {"node-01", "bucket-01"}:
         raise ValidationError("Fault alias is not authorized")
     inventory = load(INVENTORY_PATH)

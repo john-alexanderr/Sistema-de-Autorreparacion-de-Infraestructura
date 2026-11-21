@@ -1,4 +1,4 @@
-"""Offline unit tests for identifiers, timestamps, and the event contract."""
+"""Pruebas unitarias sin conexión de identificadores, marcas de tiempo y el contrato de eventos."""
 
 import pytest
 

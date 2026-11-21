@@ -1,8 +1,8 @@
-"""Read-only inspection of the group's inventory, S3, EC2, and security groups.
+"""Inspección de solo lectura del inventario, S3, EC2 y los grupos de seguridad del grupo.
 
-The script compares ``data/inventory.json`` with the LocalStack resources that
-carry the required ownership tags. It never creates, updates, or deletes any
-resource. Run it from the repository root::
+El script compara ``data/inventory.json`` con los recursos de LocalStack que
+tienen las etiquetas de pertenencia requeridas. Nunca crea, actualiza ni elimina
+recursos. Ejecútalo desde la raíz del repositorio::
 
     ./.venv/bin/python scripts/inspect_resources.py
     ./.venv/bin/python scripts/inspect_resources.py --group GROUP_ID --json
@@ -44,7 +44,7 @@ _NO_TAG_SET_CODES = {"NoSuchTagSet", "NoSuchTagSetError"}
 
 
 def _required_ownership(group: str) -> dict[str, str]:
-    """Return the four ownership tags every group resource must carry."""
+    """Devuelve las cuatro etiquetas de pertenencia que debe tener cada recurso del grupo."""
     return {
         "ManagedBy": "ppa2",
         "Project": "fenix",
@@ -54,7 +54,7 @@ def _required_ownership(group: str) -> dict[str, str]:
 
 
 def _tags_dict(raw: object) -> dict[str, str]:
-    """Convert an AWS tag list to a plain dictionary without trusting values."""
+    """Convierte una lista de etiquetas de AWS en un diccionario simple sin confiar en sus valores."""
     tags = {}
     if not isinstance(raw, list):
         return tags
@@ -69,30 +69,30 @@ def _tags_dict(raw: object) -> dict[str, str]:
 
 
 def _safe_tags(tags: dict[str, str]) -> dict[str, str]:
-    """Keep tag-key evidence while redacting every potentially identifying value."""
+    """Conserva las claves de las etiquetas como evidencia y redacta todos los valores potencialmente identificativos."""
     return {key: _TAG_VALUE_PLACEHOLDER for key in sorted(tags)}
 
 
 def _ownership_ok(tags: dict[str, str], group: str) -> bool:
-    """Check that all required ownership tags match the observed tags."""
+    """Comprueba que todas las etiquetas de pertenencia requeridas coincidan con las observadas."""
     required = _required_ownership(group)
     return all(tags.get(key) == value for key, value in required.items())
 
 
 def _error_code(error: ClientError) -> object:
-    """Return the AWS error code or HTTP status from a ClientError."""
+    """Devuelve el código de error de AWS o el estado HTTP de un ClientError."""
     code = error.response.get("Error", {}).get("Code")
     status = error.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
     return code if code is not None else status
 
 
 def _describe_error(error: Exception) -> str:
-    """Return an error class without potentially identifying provider details."""
+    """Devuelve la clase del error sin detalles del proveedor que puedan identificarlo."""
     return type(error).__name__
 
 
 def _display_inventory_path(path: Path) -> str:
-    """Show repo-relative paths and conceal caller-supplied external paths."""
+    """Muestra rutas relativas al repositorio y oculta las rutas externas proporcionadas por quien llama."""
     try:
         return path.relative_to(ROOT).as_posix()
     except ValueError:
@@ -100,7 +100,7 @@ def _display_inventory_path(path: Path) -> str:
 
 
 def _inventory_entries(inventory: dict) -> list[dict]:
-    """Read every dictionary alias from the inventory."""
+    """Lee del inventario todos los alias cuyo valor sea un diccionario."""
     entries = []
     for alias, record in inventory.items():
         if not isinstance(record, dict):
@@ -125,7 +125,7 @@ def _inspect_bucket(
     inventory_ids: set[str],
     group: str,
 ) -> dict:
-    """Inspect one bucket with read-only head and tagging calls."""
+    """Inspecciona un bucket mediante llamadas de solo lectura a head y a las etiquetas."""
     exists = False
     tags: dict[str, str] = {}
     head_error = None
@@ -165,7 +165,7 @@ def _instance_record(
     inventory_ids: set[str],
     group: str,
 ) -> dict:
-    """Build a read-only EC2 instance record from a describe response."""
+    """Construye un registro de instancia EC2 de solo lectura a partir de una respuesta de describe."""
     tags = _tags_dict(instance.get("Tags", []))
     security_group_ids = sorted(
         security_group.get("GroupId")
@@ -186,7 +186,7 @@ def _instance_record(
 
 
 def _reservation_instances(response: dict) -> list[dict]:
-    """Flatten the EC2 reservation structure into instance dictionaries."""
+    """Aplana la estructura de reservas de EC2 en diccionarios de instancias."""
     instances = []
     for reservation in response.get("Reservations", []):
         if not isinstance(reservation, dict):
@@ -202,7 +202,7 @@ def _inspect_instances(
     group: str,
     inventory_ids: list[str],
 ) -> tuple[dict[str, dict], list[str]]:
-    """Inspect owned instances plus inventory IDs that must exist."""
+    """Inspecciona las instancias propias y los ID del inventario que deben existir."""
     required = _required_ownership(group)
     filters = [
         {"Name": f"tag:{key}", "Values": [value]}
@@ -237,7 +237,7 @@ def _inspect_instances(
 
 
 def _inspect_security_groups(ec2, group: str) -> list[dict]:
-    """Inspect the group security groups by name and ownership tags."""
+    """Inspecciona los grupos de seguridad del grupo por nombre y etiquetas de pertenencia."""
     required = _required_ownership(group)
     filters = [
         {"Name": "group-name", "Values": [f"fenix-{group}-sg"]},
@@ -270,7 +270,7 @@ def _expected_failures(
     ec2_records: dict,
     security_groups: list[dict],
 ) -> list[str]:
-    """List inventory resources that are missing or do not carry ownership tags."""
+    """Enumera los recursos del inventario que faltan o no tienen etiquetas de pertenencia."""
     s3_by_name = {record["name"]: record for record in s3_records}
     security_group_ids = {record["id"] for record in security_groups}
     failures = []
@@ -308,7 +308,7 @@ def _expected_failures(
 
 
 def _summary(s3_records: list[dict], ec2_records: dict, missing_ec2: list[str]) -> dict:
-    """Build the owned/foreign/missing counters."""
+    """Construye los contadores de recursos propios, ajenos y faltantes."""
     return {
         "ec2": {
             "owned": sum(1 for record in ec2_records.values() if record["ownership_ok"]),
@@ -330,7 +330,7 @@ def _summary(s3_records: list[dict], ec2_records: dict, missing_ec2: list[str]) 
 
 
 def _public_bucket_record(record: dict) -> dict:
-    """Return a bucket record with identifiers and tag values removed."""
+    """Devuelve un registro de bucket sin identificadores ni valores de etiquetas."""
     return {
         "name": _RESOURCE_ID_PLACEHOLDER,
         "exists": record["exists"],
@@ -342,7 +342,7 @@ def _public_bucket_record(record: dict) -> dict:
 
 
 def _public_instance_record(record: dict) -> dict:
-    """Return an instance record with identifiers and network data removed."""
+    """Devuelve un registro de instancia sin identificadores ni datos de red."""
     return {
         "id": _RESOURCE_ID_PLACEHOLDER,
         "state": record["state"],
@@ -358,7 +358,7 @@ def _public_instance_record(record: dict) -> dict:
 
 
 def _public_security_group_record(record: dict) -> dict:
-    """Return a security-group record without resource or tag values."""
+    """Devuelve un registro de grupo de seguridad sin valores de recursos ni etiquetas."""
     return {
         "id": _RESOURCE_ID_PLACEHOLDER,
         "name": _RESOURCE_ID_PLACEHOLDER,
@@ -369,7 +369,7 @@ def _public_security_group_record(record: dict) -> dict:
 
 
 def _print_human(result: dict) -> None:
-    """Render the inspection report for a human reader."""
+    """Presenta el informe de inspección para una persona."""
     print(f"Inventory: {result['inventory_path']}")
     print(f"Group: {result['group']}")
     print(f"Inventory aliases: {result['inventory_alias_count']}")
@@ -430,7 +430,7 @@ def _print_human(result: dict) -> None:
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    """Create the CLI parser after .env values are available for defaults."""
+    """Crea el analizador de la CLI después de disponer de los valores de .env para usarlos como predeterminados."""
     parser = argparse.ArgumentParser(
         description="Inspect the group's inventory and cloud resources without mutating them.",
     )
@@ -453,7 +453,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
-    """Run the read-only resource inspection and return a process exit code."""
+    """Ejecuta la inspección de recursos de solo lectura y devuelve un código de salida del proceso."""
     load_dotenv(ROOT / ".env")
     parser = _build_parser()
     args = parser.parse_args(argv)

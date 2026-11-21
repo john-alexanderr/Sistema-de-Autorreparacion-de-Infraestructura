@@ -1,4 +1,4 @@
-"""Closed event contract and inventory alias resolution."""
+"""Contrato cerrado de eventos y resolución de alias del inventario."""
 
 from fenix.utils.errors import ValidationError
 from fenix.utils.validation import identifier, utc_text
@@ -20,7 +20,7 @@ OWNERSHIP_TAGS = {"ManagedBy": "ppa2", "Project": "fenix"}
 
 
 def validate(event: dict, inventory: dict) -> dict:
-    """Validate the closed JSON schema and resolve an authorized alias."""
+    """Valida el esquema JSON cerrado y resuelve un alias autorizado."""
     if not isinstance(event, dict):
         raise ValidationError("Event must be a JSON object")
     if set(event) != EVENT_FIELDS:
