@@ -442,6 +442,31 @@ def test_telegram_adapter_sends_json_and_requires_provider_confirmation(monkeypa
 
 
 @pytest.mark.base
+def test_telegram_adapter_can_return_confirmation_metadata(monkeypatch):
+    monkeypatch.setenv("NOTIFY_PROVIDER", "telegram")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456:abcdefghijklmnopqrstuvwxyz")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "-100123456")
+
+    class Response:
+        status_code = 200
+        headers = {}
+
+        def json(self):
+            return {"ok": True, "result": {"message_id": 987654321}}
+
+    monkeypatch.setattr(
+        notifications.requests,
+        "post",
+        lambda *_args, **_kwargs: Response(),
+    )
+
+    result = notifications.notify("repair complete", return_result=True)
+
+    assert result == {"provider": "telegram", "ok": True}
+    assert "987654321" not in repr(result)
+
+
+@pytest.mark.base
 @pytest.mark.parametrize("status", [400, 401, 403])
 def test_telegram_client_errors_are_permanent(monkeypatch, status):
     monkeypatch.setenv("NOTIFY_PROVIDER", "telegram")

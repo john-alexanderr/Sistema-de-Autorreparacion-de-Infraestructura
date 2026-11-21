@@ -29,13 +29,19 @@ def _retry_after(value: str | None) -> int | None:
     return min(30, max(0, seconds))
 
 
-def notify(text: str) -> None:
-    """Send one Telegram message and classify the response for SQS retry."""
+def notify(text: str, *, return_result: bool = False) -> dict | None:
+    """Send one Telegram message and classify the response for SQS retry.
+
+    The default return value stays ``None`` for existing callers. Evidence
+    tooling can request generic confirmation metadata without message identifiers.
+    """
     mode = os.getenv("NOTIFY_PROVIDER", "console")
     message = text[:1000] if isinstance(text, str) else ""
     if mode == "console":
         print(message)
-        return
+        if return_result:
+            return {"provider": "console", "ok": True}
+        return None
     if mode != "telegram":
         raise PermanentError("NOTIFY_PROVIDER must be console or telegram")
 
@@ -77,3 +83,6 @@ def notify(text: str) -> None:
         raise PermanentError("Telegram returned an invalid response") from error
     if not isinstance(payload, dict) or payload.get("ok") is not True:
         raise PermanentError("Telegram did not confirm the notification")
+    if not return_result:
+        return None
+    return {"provider": "telegram", "ok": True}
