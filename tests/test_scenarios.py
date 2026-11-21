@@ -5,6 +5,7 @@ import logging
 
 import pytest
 import requests
+from botocore.exceptions import ClientError
 
 from fenix.services import notifications, remediation, sqs, worker
 from fenix.utils.errors import PermanentError, RetryableError
@@ -224,6 +225,128 @@ def test_worker_acknowledges_only_after_handler_success(monkeypatch):
     calls.clear()
     worker.run("queue", lambda _event: calls.append(("handler", None)), logger, once=True)
     assert calls == [("handler", None), ("ack", "receipt-current")]
+
+
+@pytest.mark.base
+def test_worker_logs_acknowledged_status_with_correlation_fields(monkeypatch, caplog):
+    message = {
+        "MessageId": "message-001",
+        "ReceiptHandle": "receipt-current",
+        "Body": json.dumps(event()),
+        "Attributes": {"ApproximateReceiveCount": "2"},
+    }
+    monkeypatch.setattr(worker, "receive", lambda _url: [message])
+    monkeypatch.setattr(worker, "acknowledge", lambda *_args: None)
+    logger = logging.getLogger("worker-ack-status-test")
+
+    with caplog.at_level(logging.INFO, logger=logger.name):
+        worker.run("queue", lambda _event: None, logger, once=True)
+
+    records = [
+        record
+        for record in caplog.records
+        if record.name == logger.name and record.getMessage() == "message_acknowledged"
+    ]
+    assert len(records) == 1
+    record = records[0]
+    assert record.status == "acknowledged"
+    assert record.event_id == "evt-node-001"
+    assert record.message_id == "message-001"
+    assert record.resource_id == "node-01"
+    assert record.attempt == 2
+    assert record.action == "acknowledge"
+
+
+@pytest.mark.base
+def test_worker_client_error_during_ack_is_logged_and_retained(monkeypatch, caplog):
+    message = {
+        "MessageId": "message-001",
+        "ReceiptHandle": "receipt-current",
+        "Body": json.dumps(event()),
+        "Attributes": {"ApproximateReceiveCount": "1"},
+    }
+    class FailedDeleteSQS:
+        calls = []
+
+        def delete_message(self, **_kwargs):
+            self.calls.append("delete")
+            raise ClientError(
+                {"Error": {"Code": "ServiceUnavailable", "Message": "do not log"}},
+                "DeleteMessage",
+            )
+
+        def change_message_visibility(self, **kwargs):
+            self.calls.append(("visibility", kwargs["VisibilityTimeout"]))
+
+    monkeypatch.setattr(worker, "receive", lambda _url: [message])
+    monkeypatch.setattr(sqs, "client", lambda _service: FailedDeleteSQS())
+    logger = logging.getLogger("worker-ack-client-error-test")
+
+    with caplog.at_level(logging.INFO, logger=logger.name):
+        worker.run("queue", lambda _event: None, logger, once=True)
+
+    records = [record for record in caplog.records if record.name == logger.name]
+    failure = next(record for record in records if record.getMessage() == "message_acknowledgement_failed")
+    assert failure.status == "ClientError"
+    assert FailedDeleteSQS.calls == ["delete", ("visibility", 2)]
+    assert not any(record.getMessage() == "message_acknowledged" for record in records)
+    assert "do not log" not in failure.getMessage()
+
+
+@pytest.mark.base
+def test_worker_client_error_during_visibility_update_is_sanitized_and_loop_continues(
+    monkeypatch, caplog
+):
+    message = {
+        "MessageId": "message-001",
+        "ReceiptHandle": "receipt-current",
+        "Body": json.dumps(event()),
+        "Attributes": {"ApproximateReceiveCount": "1"},
+    }
+    receive_calls = []
+
+    def receive(_url):
+        receive_calls.append(True)
+        if len(receive_calls) == 1:
+            return [message]
+        if len(receive_calls) == 2:
+            return []
+        raise RuntimeError("stop after proving another poll")
+
+    class FailedVisibilitySQS:
+        calls = []
+
+        def change_message_visibility(self, **_kwargs):
+            self.calls.append("visibility")
+            raise ClientError(
+                {"Error": {"Code": "ServiceUnavailable", "Message": "private response"}},
+                "ChangeMessageVisibility",
+            )
+
+        def delete_message(self, **_kwargs):
+            self.calls.append("delete")
+
+    monkeypatch.setattr(worker, "receive", receive)
+    monkeypatch.setattr(sqs, "client", lambda _service: FailedVisibilitySQS())
+    logger = logging.getLogger("worker-visibility-client-error-test")
+
+    def fail_handler(_event):
+        raise RetryableError("temporary")
+
+    with caplog.at_level(logging.INFO, logger=logger.name):
+        with pytest.raises(RuntimeError, match="proving another poll"):
+            worker.run("queue", fail_handler, logger)
+
+    failure = next(
+        record
+        for record in caplog.records
+        if record.name == logger.name
+        and record.getMessage() == "message_visibility_update_failed"
+    )
+    assert failure.status == "ClientError"
+    assert FailedVisibilitySQS.calls == ["visibility"]
+    assert len(receive_calls) == 3
+    assert "private response" not in failure.getMessage()
 
 
 @pytest.mark.base

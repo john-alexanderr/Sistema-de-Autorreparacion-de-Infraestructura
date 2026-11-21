@@ -63,7 +63,7 @@ def _retain(url: str, message: dict, error: Exception, context: dict, logger) ->
             delay = retry_later(url, message, minimum_delay=minimum)
         else:
             delay = retry_later(url, message)
-    except (BotoCoreError, OSError, ValueError, KeyError, TypeError) as retry_error:
+    except (BotoCoreError, ClientError, OSError, ValueError, KeyError, TypeError) as retry_error:
         context["status"] = type(retry_error).__name__
         _log(logger, logging.ERROR, "message_visibility_update_failed", context)
         return
@@ -136,6 +136,7 @@ def run(url: str, handler, logger, once: bool = False) -> None:
             except (
                 ProjectError,
                 BotoCoreError,
+                ClientError,
                 OSError,
                 ValueError,
                 TypeError,
@@ -150,12 +151,12 @@ def run(url: str, handler, logger, once: bool = False) -> None:
                 context["action"] = "acknowledge"
                 try:
                     acknowledge(url, receipt)
-                except (BotoCoreError, OSError, ValueError, KeyError, TypeError) as error:
+                except (BotoCoreError, ClientError, OSError, ValueError, KeyError, TypeError) as error:
                     context["status"] = type(error).__name__
                     _log(logger, logging.ERROR, "message_acknowledgement_failed", context)
                     _retain(url, message, error, context, logger)
                 else:
-                    context["status"] = "complete"
+                    context["status"] = "acknowledged"
                     _log(logger, logging.INFO, "message_acknowledged", context)
 
         if once:
