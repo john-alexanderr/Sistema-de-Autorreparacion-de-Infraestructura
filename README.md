@@ -2,7 +2,7 @@
 
 Fénix recibe eventos de infraestructura autenticados, los valida frente a un inventario propiedad del grupo, repara un recurso autorizado de LocalStack, registra el progreso y envía una notificación por Telegram. Es un laboratorio académico, no un controlador de nube de producción ni un sistema con garantía de procesamiento exactamente una vez.
 
-Material de exposición en GitHub Pages: [recorrido visual del dato, contratos, caminos de fallo y guion de clase](https://john-alexanderr.github.io/Sistema-de-Autorreparacion-de-Infraestructura/).
+Material de exposición en GitHub Pages: [la historia de un dato que no se pierde nunca](https://john-alexanderr.github.io/Sistema-de-Autorreparacion-de-Infraestructura/historia.html).
 
 ## Responsabilidades del equipo y del curso
 
