@@ -2,6 +2,8 @@
 
 Fénix recibe eventos de infraestructura autenticados, los valida frente a un inventario propiedad del grupo, repara un recurso autorizado de LocalStack, registra el progreso y envía una notificación por Telegram. Es un laboratorio académico, no un controlador de nube de producción ni un sistema con garantía de procesamiento exactamente una vez.
 
+Material de exposición en GitHub Pages: [recorrido visual del dato, contratos, caminos de fallo y guion de clase](https://john-alexanderr.github.io/Sistema-de-Autorreparacion-de-Infraestructura/).
+
 ## Responsabilidades del equipo y del curso
 
 El equipo docente aprobó una excepción para equipos de dos personas. Esto no exime de ningún requisito de roles, evidencias, revisión o defensa. Los nombres y correos electrónicos de integrantes, así como las asignaciones de responsables, siguen pendientes; la excepción no definió cómo se distribuyen los seis roles.
@@ -246,7 +248,7 @@ El adaptador de notificaciones por consola es solo para desarrollo. La evidencia
 ## Matriz de verificación
 
 La instantánea actual registra por separado las ejecuciones sin conexión y las ejecuciones de LocalStack con activación explícita.
-El conjunto de pruebas sin conexión aprobó 77 pruebas y el conjunto de LocalStack con activación explícita aprobó los seis escenarios de integración. No se realizaron llamadas a AWS ni a Telegram en vivo. Consulta el
+El conjunto de pruebas sin conexión aprobó 77 pruebas y el conjunto de LocalStack con activación explícita aprobó los seis escenarios de integración. No se realizaron llamadas a AWS; en las pruebas, F02 usó un transporte de Telegram simulado y el envío real de Telegram quedó capturado por separado en la [evidencia redactada de Telegram](evidencias/telegram/2026-11-21T060138Z_a9b1da_F02_telegram-evidence.json). Consulta el
 [registro final de verificación](evidencias/ejecuciones/2026-11-21_final-verification.log)
 para ver los comandos y resultados con datos redactados.
 
@@ -257,7 +259,7 @@ para ver los comandos y resultados con datos redactados.
 - Comando de LocalStack con activación explícita: `./.venv/bin/python -m pytest -m "integracion" -q --tb=short` — **6 passed, 77 deselected in 46.60s**. Fue una ejecución independiente con la configuración de LocalStack aprobada y la activación del curso para ese proceso.
 - `./.venv/bin/python -m pip check` informó `No broken requirements found.`; `git diff --check` se aprobó.
 - Se aprobó la aserción de origen de importaciones locales para la copia actual.
-- No se realizaron llamadas a AWS ni a Telegram en vivo; F02 usó un transporte de Telegram simulado.
+- No se realizaron llamadas a AWS; F02 usó un transporte de Telegram simulado y el envío real de Telegram se capturó por separado en la [evidencia redactada de Telegram](evidencias/telegram/2026-11-21T060138Z_a9b1da_F02_telegram-evidence.json).
 - Un análisis no encontró marcadores `TODO` ni `NotImplementedError` en Python.
 
 Las 77 pruebas sin conexión aprobadas incluyen controles de cumplimiento del repositorio, comprobaciones explícitas de configuración de credenciales locales, pruebas de límites de CLI y bytes sin procesar, cobertura del vaciado de registros en cola, gestión de reintentos de Telegram, recuperación de ventanas de fallo, gestión de `ClientError` de ACK/visibilidad del worker, puntos de control del inventario de configuración, conciliación tras reinicios y rechazo de credenciales de AWS no ficticias. El conjunto de LocalStack con activación explícita aprobó F01, F02, F03, F08, F10 y la parte de F13 correspondiente a LocalStack. La evidencia del envío real a Telegram está capturada en `evidencias/telegram/2026-11-21T060138Z_a9b1da_F02_telegram-evidence.json`; las evidencias de cada rol y de la defensa del curso siguen pendientes.
