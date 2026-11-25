@@ -299,7 +299,7 @@ Para activar las pruebas de integración, primero obtén la aprobación del equi
 
 - Nombres y correos electrónicos de integrantes, asignaciones de responsables y evidencias de roles completas: `[Pending: completar según la guía aprobada del curso y adjuntar evidencia]`.
 - Evidencia de Telegram: capturada en `evidencias/telegram/2026-11-21T060138Z_a9b1da_F02_telegram-evidence.json`; nunca incluir el token del bot ni el ID del chat.
-- Video: `[Pending: enlace]`.
+- Video: 1 PARTE `[https://youtu.be/vo7W40ds5j8]`.
 - Marcas de tiempo del video: `[Pending: marca de tiempo — tema]`.
 
 ## Declaración de asistencia de IA
