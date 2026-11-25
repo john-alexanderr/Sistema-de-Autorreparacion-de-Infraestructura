@@ -1,0 +1,1338 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="La historia de Fénix en 7 capítulos: un dato cruza seis puertas, espera en una cola, es reparado por un worker y nunca se pierde. Cuento técnico con diagramas animados.">
+  <title>Fénix · La historia de un dato que no se pierde nunca</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #060913;
+      --panel: rgba(15, 23, 42, 0.78);
+      --ink: #f8fafc;
+      --muted: #94a3b8;
+      --muted-strong: #cbd5e1;
+      --line: rgba(148, 163, 184, 0.18);
+      --cyan: #22d3ee;
+      --violet: #a78bfa;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --pink: #f472b6;
+      --red: #fb7185;
+      --shadow: 0 24px 70px rgba(2, 6, 23, 0.55);
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --sans: "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(900px 520px at 12% -6%, rgba(34, 211, 238, 0.12), transparent 60%),
+        radial-gradient(800px 520px at 92% 4%, rgba(167, 139, 250, 0.14), transparent 60%),
+        radial-gradient(700px 440px at 50% 100%, rgba(244, 114, 182, 0.08), transparent 65%),
+        var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.65;
+      text-rendering: optimizeLegibility;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      background-image:
+        linear-gradient(rgba(148, 163, 184, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.035) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: linear-gradient(to bottom, black, transparent 88%);
+    }
+
+    a { color: var(--cyan); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+    a:hover { color: #a5f3fc; }
+    code, pre { font-family: var(--mono); }
+    code {
+      padding: 0.12em 0.38em;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(2, 6, 23, 0.55);
+      color: #e2e8f0;
+      font-size: 0.9em;
+    }
+    pre {
+      margin: 0;
+      padding: 1.1rem 1.2rem;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #050a15;
+      color: #dbeafe;
+      font-size: 0.86rem;
+      line-height: 1.55;
+      tab-size: 2;
+    }
+    pre code { padding: 0; border: 0; background: none; color: inherit; font-size: inherit; }
+    ::selection { background: rgba(34, 211, 238, 0.28); color: white; }
+
+    .skip-link {
+      position: absolute;
+      top: -60px;
+      left: 18px;
+      z-index: 100;
+      padding: 0.7rem 1rem;
+      border-radius: 10px;
+      background: var(--cyan);
+      color: #04111d;
+      font-weight: 800;
+      text-decoration: none;
+    }
+    .skip-link:focus { top: 18px; }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid var(--line);
+      background: rgba(6, 9, 19, 0.78);
+      backdrop-filter: blur(18px);
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.2rem;
+      width: min(1180px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 0.9rem 0;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      color: var(--ink);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-decoration: none;
+    }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border: 1px solid rgba(34, 211, 238, 0.45);
+      border-radius: 11px;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.18), rgba(167, 139, 250, 0.18));
+      color: var(--cyan);
+      font-size: 0.82rem;
+    }
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.4rem 1rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .nav-links a { color: var(--muted); font-size: 0.9rem; font-weight: 600; text-decoration: none; }
+    .nav-links a:hover { color: var(--ink); }
+
+    main { overflow: clip; }
+    .wrap { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+      gap: clamp(2rem, 5vw, 4.5rem);
+      align-items: center;
+      padding: clamp(3.5rem, 8vw, 7rem) 0 clamp(3rem, 6vw, 5rem);
+    }
+    .eyebrow, .kicker {
+      margin: 0 0 0.9rem;
+      color: var(--cyan);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.19em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3 { line-height: 1.12; text-wrap: balance; }
+    h1 {
+      margin: 0;
+      max-width: 14ch;
+      font-size: clamp(2.5rem, 6.4vw, 5rem);
+      letter-spacing: -0.055em;
+      background: linear-gradient(115deg, #ffffff 14%, #a5f3fc 48%, #c4b5fd 82%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .lead {
+      max-width: 62ch;
+      margin: 1.4rem 0 0;
+      color: var(--muted-strong);
+      font-size: clamp(1.02rem, 1.7vw, 1.2rem);
+    }
+    .badges { display: flex; flex-wrap: wrap; gap: 0.55rem; margin: 1.6rem 0 0; padding: 0; list-style: none; }
+    .badges li {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.42rem 0.7rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.62);
+      color: var(--muted-strong);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px var(--green); }
+    .dot.cyan { background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+    .dot.violet { background: var(--violet); box-shadow: 0 0 12px var(--violet); }
+    .dot.amber { background: var(--amber); box-shadow: 0 0 12px var(--amber); }
+
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.8rem; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0.72rem 1.1rem;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--cyan), #67e8f9);
+      color: #04111d;
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 12px 30px rgba(34, 211, 238, 0.18);
+    }
+    .button:hover { color: #04111d; filter: brightness(1.06); }
+    .button.ghost {
+      border-color: var(--line);
+      background: rgba(15, 23, 42, 0.62);
+      color: var(--ink);
+      box-shadow: none;
+    }
+    .button.ghost:hover { border-color: rgba(34, 211, 238, 0.45); }
+
+    .hero-media { position: relative; }
+    .hero-media::before {
+      content: "";
+      position: absolute;
+      inset: -20px -18px 34px 18px;
+      z-index: -1;
+      border-radius: 30px;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(167, 139, 250, 0.18), rgba(244, 114, 182, 0.12));
+      filter: blur(28px);
+    }
+    .media-frame {
+      margin: 0;
+      padding: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 26px;
+      background: linear-gradient(145deg, rgba(34, 211, 238, 0.18), rgba(15, 23, 42, 0.82) 42%, rgba(167, 139, 250, 0.2));
+      box-shadow: var(--shadow);
+    }
+    .media-frame svg { display: block; width: 100%; height: auto; border-radius: 19px; background: #050a15; }
+    .media-frame figcaption { padding: 0.8rem 0.65rem 0.35rem; color: var(--muted); font-size: 0.82rem; }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem; padding: 1.4rem 0 0; }
+    .stat {
+      padding: 1.05rem 1.1rem;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(8, 13, 27, 0.7));
+    }
+    .stat strong { display: block; color: var(--ink); font-size: 1.35rem; letter-spacing: -0.02em; }
+    .stat span { color: var(--muted); font-size: 0.81rem; }
+    .stat:nth-child(1) strong { color: var(--cyan); }
+    .stat:nth-child(2) strong { color: var(--violet); }
+    .stat:nth-child(3) strong { color: var(--amber); }
+    .stat:nth-child(4) strong { color: var(--green); }
+
+    .section { padding: clamp(4rem, 8vw, 7rem) 0 0; scroll-margin-top: 86px; }
+    .section-heading { max-width: 78ch; margin-bottom: 1.8rem; }
+    .section-heading h2 { margin: 0; font-size: clamp(2rem, 4.5vw, 3.6rem); letter-spacing: -0.045em; }
+    .section-heading p { margin: 1rem 0 0; color: var(--muted); font-size: 1.02rem; }
+    .section-heading p strong { color: var(--muted-strong); }
+
+    .chapter-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin: 0 0 0.9rem;
+      color: var(--cyan);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .chapter-tag::before {
+      content: attr(data-n);
+      display: grid;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      border: 1px solid rgba(34, 211, 238, 0.45);
+      border-radius: 10px;
+      background: rgba(34, 211, 238, 0.1);
+      color: var(--cyan);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      letter-spacing: 0;
+    }
+
+    .prose { max-width: 68ch; }
+    .prose p { margin: 0 0 1.1rem; color: var(--muted-strong); font-size: 1.04rem; }
+    .prose p strong { color: var(--ink); }
+    .prose p em { color: #a5f3fc; font-style: normal; font-weight: 600; }
+
+    .voice {
+      position: relative;
+      max-width: 68ch;
+      margin: 1.6rem 0 0;
+      padding: 1.1rem 1.2rem 1.1rem 3.4rem;
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.09), rgba(167, 139, 250, 0.06));
+      color: var(--ink);
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+    .voice::before {
+      content: "VOZ";
+      position: absolute;
+      top: 1.1rem;
+      left: 1rem;
+      color: var(--cyan);
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      writing-mode: vertical-rl;
+    }
+    .voice p { margin: 0; }
+    .voice strong { color: var(--cyan); }
+
+    .diagram-panel {
+      margin: 1.8rem 0 0;
+      padding: 0.8rem;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 26px;
+      background: linear-gradient(160deg, rgba(34, 211, 238, 0.1), rgba(15, 23, 42, 0.9) 32%, rgba(167, 139, 250, 0.1));
+      box-shadow: var(--shadow);
+    }
+    .diagram-panel svg { display: block; width: 100%; height: auto; border-radius: 18px; background: #050a15; }
+    .diagram-panel figcaption { padding: 0.8rem 0.65rem 0.3rem; color: var(--muted); font-size: 0.83rem; }
+
+    .toc { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem; }
+    .toc a {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      padding: 1.1rem;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(8, 13, 27, 0.68));
+      color: inherit;
+      text-decoration: none;
+      transition: transform 180ms ease, border-color 180ms ease;
+    }
+    .toc a:hover { transform: translateY(-3px); border-color: rgba(34, 211, 238, 0.4); color: inherit; }
+    .toc .n { color: var(--cyan); font-family: var(--mono); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.14em; }
+    .toc strong { font-size: 1rem; }
+    .toc span.d { color: var(--muted); font-size: 0.84rem; line-height: 1.5; }
+
+    .scene { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; margin-top: 1.6rem; }
+    .beat {
+      padding: 1.15rem;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(8, 13, 27, 0.68));
+    }
+    .beat .who {
+      display: inline-block;
+      margin-bottom: 0.55rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .beat h3 { margin: 0 0 0.4rem; font-size: 1.05rem; }
+    .beat p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+    .beat.bad { border-top: 2px solid var(--red); }
+    .beat.warn { border-top: 2px solid var(--amber); }
+    .beat.good { border-top: 2px solid var(--green); }
+
+    .numbers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem; margin-top: 1.6rem; }
+    .number {
+      padding: 1.1rem;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.66);
+      text-align: center;
+    }
+    .number strong { display: block; color: var(--cyan); font-size: 1.7rem; letter-spacing: -0.03em; }
+    .number:nth-child(2) strong { color: var(--violet); }
+    .number:nth-child(3) strong { color: var(--amber); }
+    .number:nth-child(4) strong { color: var(--red); }
+    .number span { color: var(--muted); font-size: 0.82rem; }
+
+    .belt {
+      position: relative;
+      height: 132px;
+      margin-top: 1.6rem;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(8, 13, 27, 0.8)), #050a15;
+      box-shadow: var(--shadow);
+    }
+    .belt::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 74%;
+      border-top: 3px dashed rgba(148, 163, 184, 0.35);
+    }
+    .belt .chip {
+      position: absolute;
+      top: 50%;
+      padding: 0.34rem 0.6rem;
+      border: 1px solid rgba(34, 211, 238, 0.5);
+      border-radius: 999px;
+      background: rgba(34, 211, 238, 0.12);
+      color: #a5f3fc;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      transform: translate(-50%, -50%);
+      animation: belt-run 7s linear infinite;
+    }
+    .belt .chip.hold { animation-name: belt-hold; border-color: rgba(251, 191, 36, 0.55); background: rgba(251, 191, 36, 0.12); color: #fcd34d; }
+    .belt .chip.lost { animation-name: belt-lost; border-color: rgba(251, 113, 133, 0.55); background: rgba(251, 113, 133, 0.12); color: #fda4af; }
+    .belt .chip:nth-of-type(2) { animation-delay: -2.3s; }
+    .belt .chip:nth-of-type(3) { animation-delay: -4.6s; }
+    .belt .shelf {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      bottom: 12px;
+      width: 21%;
+      display: grid;
+      place-items: center;
+      padding: 0.4rem;
+      border: 1px dashed rgba(251, 113, 133, 0.55);
+      border-radius: 14px;
+      background: rgba(251, 113, 133, 0.08);
+      color: #fda4af;
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .belt .label {
+      position: absolute;
+      left: 14px;
+      top: 10px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    @keyframes belt-run {
+      0% { left: -6%; opacity: 0; }
+      6% { opacity: 1; }
+      72% { left: 74%; opacity: 1; }
+      82%, 100% { left: 74%; opacity: 0; }
+    }
+    @keyframes belt-hold {
+      0% { left: -6%; opacity: 0; }
+      5% { opacity: 1; }
+      28% { left: 32%; opacity: 1; }
+      52% { left: 32%; opacity: 0.25; }
+      58% { left: 32%; opacity: 1; }
+      80% { left: 74%; opacity: 1; }
+      90%, 100% { left: 74%; opacity: 0; }
+    }
+    @keyframes belt-lost {
+      0% { left: -6%; opacity: 0; }
+      5% { opacity: 1; }
+      74% { left: 74%; opacity: 1; }
+      86% { left: 86%; opacity: 1; }
+      96%, 100% { left: 86%; opacity: 0; }
+    }
+
+    .n-box { fill: #0f172a; stroke: rgba(148, 163, 184, 0.4); stroke-width: 1.5; }
+    .n-box.cyan { stroke: rgba(34, 211, 238, 0.55); }
+    .n-box.violet { stroke: rgba(167, 139, 250, 0.55); }
+    .n-box.amber { stroke: rgba(251, 191, 36, 0.55); }
+    .n-box.green { fill: #0b1a17; stroke: rgba(52, 211, 153, 0.6); }
+    .n-box.red { fill: #1a0d13; stroke: rgba(251, 113, 133, 0.6); }
+    .n-title { fill: #f8fafc; font: 700 14px var(--sans); text-anchor: middle; }
+    .n-sub { fill: #94a3b8; font: 500 11px var(--sans); text-anchor: middle; }
+    .edge { fill: none; stroke: rgba(148, 163, 184, 0.55); stroke-width: 2; }
+    .edge.ok { stroke: rgba(52, 211, 153, 0.75); }
+    .edge.fail { stroke: rgba(251, 113, 133, 0.8); stroke-dasharray: 7 7; }
+    .edge.retry { stroke: rgba(251, 191, 36, 0.8); stroke-dasharray: 5 7; }
+    .edge.march { stroke-dasharray: 7 7; animation: march 1.1s linear infinite; }
+    @keyframes march { to { stroke-dashoffset: -14; } }
+    .p-label { fill: #cbd5e1; font: 700 11px var(--mono); text-anchor: middle; }
+    .p-label.ok { fill: #6ee7b7; }
+    .p-label.fail { fill: #fda4af; }
+    .p-label.retry { fill: #fcd34d; }
+    .gate-box { fill: #0f172a; stroke: rgba(34, 211, 238, 0.45); stroke-width: 1.5; }
+    .gate-box.ok { fill: #0b1a17; stroke: rgba(52, 211, 153, 0.65); }
+    .gate-name { fill: #f8fafc; font: 700 13px var(--sans); text-anchor: middle; }
+    .gate-sub { fill: #94a3b8; font: 500 10px var(--sans); text-anchor: middle; }
+    .rej-box { fill: rgba(251, 113, 133, 0.1); stroke: rgba(251, 113, 133, 0.55); stroke-width: 1.5; }
+    .rej-text { fill: #fda4af; font: 800 13px var(--mono); text-anchor: middle; }
+    .ok-text { fill: #6ee7b7; font: 800 17px var(--mono); text-anchor: middle; }
+    .ok-sub { fill: #94a3b8; font: 600 10px var(--sans); text-anchor: middle; }
+    .stub { stroke: rgba(251, 113, 133, 0.7); stroke-width: 2; stroke-dasharray: 5 5; fill: none; }
+    .packet-core { fill: #22d3ee; }
+    .packet-halo { fill: rgba(34, 211, 238, 0.16); }
+    .packet-core.amber { fill: #fbbf24; }
+    .packet-halo.amber { fill: rgba(251, 191, 36, 0.16); }
+
+    .journey-packet { animation: travel-journey 7s linear infinite both; }
+    .journey-packet.b { animation-delay: -3.5s; }
+    @keyframes travel-journey {
+      0% { transform: translate(84px, 170px); opacity: 0; }
+      4% { opacity: 1; }
+      73% { transform: translate(660px, 170px); opacity: 1; }
+      90% { transform: translate(770px, 100px); opacity: 1; }
+      97% { transform: translate(850px, 100px); opacity: 1; }
+      100% { transform: translate(850px, 100px); opacity: 0; }
+    }
+    .gate-packet { animation: travel-gate 6s linear infinite both; }
+    .gate-packet.b { animation-delay: -3s; }
+    @keyframes travel-gate {
+      0% { transform: translate(64px, 98px); opacity: 0; }
+      5% { opacity: 1; }
+      95% { opacity: 1; }
+      100% { transform: translate(888px, 98px); opacity: 0; }
+    }
+    .orbit {
+      transform-box: view-box;
+      transform-origin: 330px 150px;
+      animation: spin 5s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; }
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      padding: 1.15rem;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(8, 13, 27, 0.68));
+    }
+    .card h3 { margin: 0; font-size: 1.04rem; }
+    .card p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+    .card .file {
+      display: inline-block;
+      width: fit-content;
+      margin-top: auto;
+      padding: 0.25rem 0.45rem;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      color: var(--muted-strong);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      overflow-wrap: anywhere;
+    }
+    .card.cyan { border-top: 2px solid var(--cyan); }
+    .card.violet { border-top: 2px solid var(--violet); }
+    .card.green { border-top: 2px solid var(--green); }
+    .card.amber { border-top: 2px solid var(--amber); }
+    .card.pink { border-top: 2px solid var(--pink); }
+    .card.red { border-top: 2px solid var(--red); }
+
+    .timeline { display: grid; gap: 0.7rem; margin: 1.6rem 0 0; padding: 0; list-style: none; counter-reset: etapa; }
+    .timeline li {
+      display: grid;
+      grid-template-columns: 3rem minmax(0, 1fr);
+      gap: 0.9rem;
+      padding: 0.9rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.62);
+    }
+    .timeline li::before {
+      counter-increment: etapa;
+      content: counter(etapa);
+      display: grid;
+      place-items: center;
+      width: 2.4rem;
+      height: 2.4rem;
+      border: 1px solid rgba(34, 211, 238, 0.38);
+      border-radius: 11px;
+      background: rgba(34, 211, 238, 0.1);
+      color: var(--cyan);
+      font-family: var(--mono);
+      font-size: 0.86rem;
+      font-weight: 800;
+    }
+    .timeline h3 { margin: 0 0 0.2rem; font-size: 0.98rem; }
+    .timeline p { margin: 0; color: var(--muted); font-size: 0.86rem; }
+    .timeline .st { color: var(--muted-strong); font-family: var(--mono); font-size: 0.74rem; font-weight: 700; }
+
+    .command-card { padding: 1rem; border: 1px solid var(--line); border-radius: 18px; background: rgba(15, 23, 42, 0.72); }
+    .command-card h3 { margin: 0 0 0.25rem; font-size: 1rem; }
+    .command-card p { margin: 0 0 0.75rem; color: var(--muted); font-size: 0.84rem; }
+    .command-card pre { font-size: 0.75rem; }
+    .command-stack { display: grid; gap: 1rem; margin-top: 1.6rem; }
+
+    .note {
+      padding: 1rem 1.05rem;
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--green);
+      border-radius: 0 16px 16px 0;
+      background: rgba(15, 23, 42, 0.62);
+    }
+    .note h3 { margin: 0 0 0.25rem; font-size: 0.98rem; }
+    .note p { margin: 0; color: var(--muted); font-size: 0.86rem; }
+    .note.cyan { border-left-color: var(--cyan); }
+    .note.violet { border-left-color: var(--violet); }
+    .note.amber { border-left-color: var(--amber); }
+    .note.pink { border-left-color: var(--pink); }
+    .note.red { border-left-color: var(--red); }
+    .notes { display: grid; gap: 0.75rem; margin-top: 1.6rem; }
+
+    .callout {
+      margin-top: 1.6rem;
+      padding: 1.1rem 1.2rem;
+      border: 1px solid rgba(34, 211, 238, 0.28);
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.08), rgba(167, 139, 250, 0.06));
+      color: var(--muted-strong);
+      font-size: 0.92rem;
+    }
+    .callout strong { color: var(--ink); }
+
+    .finale {
+      margin-top: 1.8rem;
+      padding: clamp(1.6rem, 4vw, 2.6rem);
+      border: 1px solid rgba(167, 139, 250, 0.35);
+      border-radius: 26px;
+      background: linear-gradient(150deg, rgba(167, 139, 250, 0.14), rgba(15, 23, 42, 0.85) 55%, rgba(34, 211, 238, 0.1));
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .finale p {
+      margin: 0 auto;
+      max-width: 46ch;
+      font-size: clamp(1.3rem, 3vw, 1.9rem);
+      font-weight: 800;
+      line-height: 1.35;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+    .finale p strong { color: var(--cyan); }
+    .finale .sub { margin-top: 1rem; font-size: 0.95rem; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+
+    footer {
+      margin-top: clamp(4rem, 8vw, 7rem);
+      border-top: 1px solid var(--line);
+      background: rgba(6, 9, 19, 0.7);
+    }
+    .footer-inner {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 2rem 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+    .footer-inner p { margin: 0; max-width: 66ch; }
+
+    @media (max-width: 980px) {
+      .hero { grid-template-columns: 1fr; padding-top: 3rem; }
+      .hero-media { order: -1; }
+      .stat-grid, .numbers, .cards, .scene { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .toc { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 660px) {
+      .nav { align-items: flex-start; }
+      .nav-links { display: none; }
+      .stat-grid, .numbers, .cards, .scene, .toc { grid-template-columns: 1fr; }
+      .timeline li { grid-template-columns: 1fr; gap: 0.25rem; }
+      h1 { max-width: 11ch; }
+      .voice { padding-left: 1.2rem; }
+      .voice::before { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .journey-packet, .gate-packet, .orbit, .edge.march, .belt .chip { animation: none !important; }
+      .journey-packet { transform: translate(660px, 170px); opacity: 1; }
+      .gate-packet { transform: translate(484px, 98px); opacity: 1; }
+      .belt .chip { left: 40%; opacity: 1; }
+      .toc a { transition: none; }
+    }
+    @media print {
+      .site-header, .hero-actions { display: none; }
+      body { background: white; color: black; }
+      .section { padding-top: 2rem; }
+      .card, .beat, .note, .diagram-panel, .timeline li, .finale { break-inside: avoid; }
+      .journey-packet, .gate-packet, .orbit, .edge.march, .belt .chip { animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+  <header class="site-header">
+    <nav class="nav" aria-label="Navegación principal">
+      <a class="brand" href="#inicio" aria-label="Fénix, ir al inicio">
+        <span class="brand-mark" aria-hidden="true">FX</span>
+        <span>Fénix · Historia</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#indice">Índice</a></li>
+        <li><a href="#puerta">La puerta</a></li>
+        <li><a href="#cola">La cola</a></li>
+        <li><a href="#worker">El worker</a></li>
+        <li><a href="#demo">La demo</a></li>
+        <li><a href="index.html">Sitio técnico</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="contenido">
+    <section class="hero wrap" id="inicio" aria-labelledby="titulo-principal">
+      <div>
+        <p class="eyebrow">Fénix · una historia en 7 capítulos</p>
+        <h1 id="titulo-principal">Un dato que no se pierde nunca.</h1>
+        <p class="lead">
+          A las tres de la mañana una instancia se apaga y nadie se entera. Esta es la historia de cómo
+          un evento firmado cruza seis puertas, espera en una cinta, es reparado por un trabajador que
+          no miente, y termina —siempre— en algún lado donde alguien puede mirarlo.
+        </p>
+        <ul class="badges" aria-label="Características de la historia">
+          <li><span class="dot cyan" aria-hidden="true"></span>7 capítulos</li>
+          <li><span class="dot violet" aria-hidden="true"></span>~9 minutos de relato</li>
+          <li><span class="dot amber" aria-hidden="true"></span>Diagramas animados</li>
+          <li><span class="dot" aria-hidden="true"></span>Comandos reales</li>
+        </ul>
+        <div class="hero-actions">
+          <a class="button" href="#cap-1">Empezar la historia</a>
+          <a class="button ghost" href="#voz">Guion de voz en off</a>
+          <a class="button ghost" href="index.html">Ver sitio técnico</a>
+        </div>
+      </div>
+
+      <figure class="hero-media">
+        <div class="media-frame">
+          <svg viewBox="0 0 960 340" role="img" aria-labelledby="journey-title journey-desc">
+            <title id="journey-title">El viaje completo del dato</title>
+            <desc id="journey-desc">Un paquete viaja desde el origen, cruza la puerta, entra a la cola, llega al worker y termina en el éxito con ACK. El worker puede devolver el mensaje a la cola con una espera, y tras tres fallas la cola lo envía a la DLQ.</desc>
+
+            <line class="edge" x1="144" y1="170" x2="196" y2="170"/>
+            <line class="edge" x1="316" y1="170" x2="368" y2="170"/>
+            <line class="edge" x1="488" y1="170" x2="540" y2="170"/>
+            <line class="edge ok" x1="660" y1="170" x2="770" y2="100"/>
+            <line class="edge ok" x1="770" y1="100" x2="850" y2="100"/>
+            <line class="edge fail" x1="660" y1="170" x2="770" y2="270"/>
+            <path class="edge retry" d="M 600 138 V 86 H 428 V 138"/>
+            <polygon points="428,138 423,128 433,128" fill="rgba(251,191,36,0.8)"/>
+            <polygon points="770,100 758,97 762,107" fill="rgba(52,211,153,0.85)"/>
+            <polygon points="770,270 758,266 761,277" fill="rgba(251,113,133,0.85)"/>
+
+            <text class="p-label" x="170" y="158">firmado</text>
+            <text class="p-label ok" x="342" y="158">202</text>
+            <text class="p-label retry" x="514" y="76">2 s · 4 s · 8 s</text>
+            <text class="p-label ok" x="716" y="134">ACK</text>
+            <text class="p-label fail" x="714" y="232">3 fallos</text>
+
+            <g>
+              <rect class="n-box cyan" x="24" y="138" width="120" height="64" rx="14"/>
+              <text class="n-title" x="84" y="166">Origen</text>
+              <text class="n-sub" x="84" y="186">JSON firmado</text>
+            </g>
+            <g>
+              <rect class="n-box violet" x="196" y="138" width="120" height="64" rx="14"/>
+              <text class="n-title" x="256" y="166">Puerta</text>
+              <text class="n-sub" x="256" y="186">6 chequeos</text>
+            </g>
+            <g>
+              <rect class="n-box cyan" x="368" y="138" width="120" height="64" rx="14"/>
+              <text class="n-title" x="428" y="166">Cola</text>
+              <text class="n-sub" x="428" y="186">SQS · 45 s</text>
+            </g>
+            <g>
+              <rect class="n-box amber" x="540" y="138" width="120" height="64" rx="14"/>
+              <text class="n-title" x="600" y="166">Worker</text>
+              <text class="n-sub" x="600" y="186">1 mensaje</text>
+            </g>
+            <g>
+              <rect class="n-box green" x="770" y="68" width="160" height="64" rx="14"/>
+              <text class="n-title" x="850" y="96">Éxito</text>
+              <text class="n-sub" x="850" y="116">ledger · aviso · ACK</text>
+            </g>
+            <g>
+              <rect class="n-box red" x="770" y="238" width="160" height="64" rx="14"/>
+              <text class="n-title" x="850" y="266">DLQ</text>
+              <text class="n-sub" x="850" y="286">3 fallos · 14 días</text>
+            </g>
+
+            <g class="journey-packet">
+              <circle class="packet-halo" cx="0" cy="0" r="15"/>
+              <circle class="packet-core" cx="0" cy="0" r="6"/>
+            </g>
+            <g class="journey-packet b">
+              <circle class="packet-halo" cx="0" cy="0" r="15"/>
+              <circle class="packet-core" cx="0" cy="0" r="6"/>
+            </g>
+          </svg>
+          <figcaption>El paquete viaja de izquierda a derecha. La línea ámbar es el reintento; la roja, el camino a la DLQ.</figcaption>
+        </div>
+      </figure>
+    </section>
+
+    <div class="wrap">
+      <div class="stat-grid" aria-label="Resumen de la historia">
+        <div class="stat"><strong>6 puertas</strong><span>antes de tocar la cola</span></div>
+        <div class="stat"><strong>3 intentos</strong><span>antes de caer en la DLQ</span></div>
+        <div class="stat"><strong>2 · 4 · 8 s</strong><span>la espera entre reintentos</span></div>
+        <div class="stat"><strong>0 mensajes perdidos</strong><span>siempre hay un destino</span></div>
+      </div>
+    </div>
+
+    <section class="section wrap" id="indice" aria-labelledby="titulo-indice">
+      <div class="section-heading">
+        <p class="kicker">El índice</p>
+        <h2 id="titulo-indice">Los 7 capítulos</h2>
+        <p>La historia completa, en orden. Cada capítulo tiene su escena, su diagrama y la frase exacta para contarla en voz alta.</p>
+      </div>
+
+      <nav class="toc" aria-label="Índice de capítulos">
+        <a href="#cap-1"><span class="n">CAPÍTULO 01</span><strong>Las 3 de la mañana</strong><span class="d">El problema que nadie ve y el principio que lo resuelve.</span></a>
+        <a href="#puerta"><span class="n">CAPÍTULO 02</span><strong>La puerta angosta</strong><span class="d">Seis cerraduras en orden: tamaño, firma, JSON, inventario, contrato, cola.</span></a>
+        <a href="#cola"><span class="n">CAPÍTULO 03</span><strong>La cinta que esconde</strong><span class="d">La cola guarda, oculta 45 segundos y a la tercera caída manda a la estantería.</span></a>
+        <a href="#worker"><span class="n">CAPÍTULO 04</span><strong>El trabajador que no miente</strong><span class="d">Uno por vez. Si falla, no borra: espera 2, 4 y 8 segundos.</span></a>
+        <a href="#reparacion"><span class="n">CAPÍTULO 05</span><strong>La memoria y la reparación</strong><span class="d">El ledger recuerda cada etapa; EC2 y S3 solo se tocan si son nuestras.</span></a>
+        <a href="#demo"><span class="n">CAPÍTULO 06</span><strong>La demo, en vivo</strong><span class="d">Cuatro comandos que cuentan la historia entera en una terminal.</span></a>
+        <a href="#limites"><span class="n">CAPÍTULO 07</span><strong>Lo que este cuento no es</strong><span class="d">Los límites honestos: LocalStack, at-least-once y avisos que pueden repetirse.</span></a>
+        <a href="#cierre"><span class="n">CIERRE</span><strong>Primero verificar</strong><span class="d">La frase con la que se cierra la exposición.</span></a>
+      </nav>
+    </section>
+
+    <section class="section wrap" id="cap-1" aria-labelledby="titulo-cap1">
+      <div class="section-heading">
+        <p class="chapter-tag" data-n="01">Capítulo uno</p>
+        <h2 id="titulo-cap1">Las 3 de la mañana</h2>
+      </div>
+
+      <div class="prose">
+        <p>
+          Nadie diseña sistemas para las 3 de la mañana. Se diseñan para el mediodía, con el equipo
+          despierto y el café recién servido. Pero las instancias no se apagan en horario laboral:
+          se apagas <em>solas</em>, justo cuando no hay nadie mirando.
+        </p>
+        <p>
+          Fénix nace de esa escena. No promete milagros: promete un <strong>proceso</strong>. Cuando
+          llega la alerta —un evento firmado, con nombre y apellido— el sistema hace exactamente tres
+          cosas, siempre en este orden: <strong>verificar, actuar y dejar rastro</strong>. Si no puede
+          actuar, no finge éxito: lo dice, guarda el intento y deja el mensaje en un lugar donde
+          alguien puede mirarlo después.
+        </p>
+        <p>
+          La analogía es una oficina de correos con lista de chequeo. Un paquete llega, se revisa la
+          dirección, se firma el recibo y recién ahí entra a la sala de procesamiento. Si el paquete
+          está mal, no se pierde: queda en la estantería de problemas.
+        </p>
+      </div>
+
+      <div class="scene">
+        <article class="beat bad">
+          <span class="who">El incidente</span>
+          <h3>La instancia se apaga</h3>
+          <p><code>node-01</code> pasa a <code>stopped</code>. No hay nadie en el teclado. El dashboard queda en rojo sin explicación.</p>
+        </article>
+        <article class="beat warn">
+          <span class="who">La alarma</span>
+          <h3>Llega un evento firmado</h3>
+          <p>Un JSON de seis campos, firmado con HMAC-SHA256 sobre los bytes exactos. No es una pista: es una orden verificable.</p>
+        </article>
+        <article class="beat good">
+          <span class="who">El principio</span>
+          <h3>Verificar · actuar · rastro</h3>
+          <p>Primero se comprueba que el recurso es nuestro. Después se repara. Cada etapa queda escrita en el ledger.</p>
+        </article>
+      </div>
+
+      <blockquote class="voice">
+        <p>«Este es Fénix: un laboratorio que repara infraestructura solo. Cuando una instancia se apaga o a un bucket le faltan etiquetas, alguien tiene que enterarse y actuar. Fénix lo hace con un principio corto: <strong>primero verificar, después actuar, y cada paso deja un rastro</strong>.»</p>
+      </blockquote>
+    </section>
+    <section class="section wrap" id="puerta" aria-labelledby="titulo-puerta">
+      <div class="section-heading">
+        <p class="chapter-tag" data-n="02">Capítulo dos</p>
+        <h2 id="titulo-puerta">La puerta angosta</h2>
+        <p>
+          El dato llega a <code>POST /webhook</code>. Del otro lado hay seis cerraduras, y el orden
+          está elegido a propósito: <strong>la más barata de fallar va primero</strong>. Así se
+          rechaza rápido lo barato de rechazar.
+        </p>
+      </div>
+
+      <div class="prose">
+        <p>
+          <em>Primero el tamaño.</em> Cuerpos de más de 16 KiB reciben un <code>413</code> antes de
+          que nadie toque un solo byte de HMAC. Leer y firmar un cuerpo enorme es trabajo que no
+          vamos a regalar.
+        </p>
+        <p>
+          <em>Después la firma.</em> El cliente calcula HMAC-SHA256 sobre <code>timestamp.punto.cuerpo</code>
+          y lo manda en <code>X-Webhook-Signature</code>. Verificamos la sintaxis exacta, que la marca
+          de tiempo esté dentro de ±300 segundos, y comparamos en tiempo constante. Un solo byte
+          distinto en el cuerpo rompe todo: <code>401</code>, y nada entra.
+        </p>
+        <p>
+          Luego vienen el JSON estricto (<code>400</code> si hay claves duplicadas o <code>NaN</code>),
+          el inventario legible (<code>503</code> si no hay con qué validar), el contrato cerrado de
+          seis campos (<code>422</code>) y recién entonces la cola. Solo cuando SQS confirma,
+          responde <code>202</code>.
+        </p>
+      </div>
+
+      <figure class="diagram-panel">
+        <svg viewBox="0 0 960 360" role="img" aria-labelledby="gates-title gates-desc">
+          <title id="gates-title">Las seis puertas del receptor</title>
+          <desc id="gates-desc">Seis puertas en fila: tamaño, firma, JSON, inventario, contrato y cola. Cada puerta tiene una rama roja con su código de rechazo: 413, 401, 400, 503, 422 y 503. Al final, la respuesta 202 aceptado.</desc>
+
+          <line class="edge" x1="112" y1="98" x2="156" y2="98"/>
+          <line class="edge" x1="252" y1="98" x2="296" y2="98"/>
+          <line class="edge" x1="392" y1="98" x2="436" y2="98"/>
+          <line class="edge" x1="532" y1="98" x2="576" y2="98"/>
+          <line class="edge" x1="672" y1="98" x2="716" y2="98"/>
+          <line class="edge ok" x1="812" y1="98" x2="848" y2="98"/>
+
+          <g>
+            <rect class="gate-box" x="16" y="60" width="96" height="76" rx="13"/>
+            <text class="gate-name" x="64" y="92">Tamaño</text>
+            <text class="gate-sub" x="64" y="112">≤ 16 KiB</text>
+          </g>
+          <g>
+            <rect class="gate-box" x="156" y="60" width="96" height="76" rx="13"/>
+            <text class="gate-name" x="204" y="92">Firma</text>
+            <text class="gate-sub" x="204" y="112">HMAC · 300 s</text>
+          </g>
+          <g>
+            <rect class="gate-box" x="296" y="60" width="96" height="76" rx="13"/>
+            <text class="gate-name" x="344" y="92">JSON</text>
+            <text class="gate-sub" x="344" y="112">estricto</text>
+          </g>
+          <g>
+            <rect class="gate-box" x="436" y="60" width="96" height="76" rx="13"/>
+            <text class="gate-name" x="484" y="92">Inventario</text>
+            <text class="gate-sub" x="484" y="112">legible</text>
+          </g>
+          <g>
+            <rect class="gate-box" x="576" y="60" width="96" height="76" rx="13"/>
+            <text class="gate-name" x="624" y="92">Contrato</text>
+            <text class="gate-sub" x="624" y="112">6 campos</text>
+          </g>
+          <g>
+            <rect class="gate-box" x="716" y="60" width="96" height="76" rx="13"/>
+            <text class="gate-name" x="764" y="92">Cola</text>
+            <text class="gate-sub" x="764" y="112">SQS</text>
+          </g>
+          <g>
+            <rect class="gate-box ok" x="848" y="66" width="88" height="64" rx="13"/>
+            <text class="ok-text" x="892" y="96">202</text>
+            <text class="ok-sub" x="892" y="116">aceptado</text>
+          </g>
+
+          <path class="stub" d="M 64 136 V 196"/>
+          <path class="stub" d="M 204 136 V 196"/>
+          <path class="stub" d="M 344 136 V 196"/>
+          <path class="stub" d="M 484 136 V 196"/>
+          <path class="stub" d="M 624 136 V 196"/>
+          <path class="stub" d="M 764 136 V 196"/>
+
+          <g>
+            <rect class="rej-box" x="28" y="196" width="72" height="40" rx="10"/>
+            <text class="rej-text" x="64" y="222">413</text>
+          </g>
+          <g>
+            <rect class="rej-box" x="168" y="196" width="72" height="40" rx="10"/>
+            <text class="rej-text" x="204" y="222">401</text>
+          </g>
+          <g>
+            <rect class="rej-box" x="308" y="196" width="72" height="40" rx="10"/>
+            <text class="rej-text" x="344" y="222">400</text>
+          </g>
+          <g>
+            <rect class="rej-box" x="448" y="196" width="72" height="40" rx="10"/>
+            <text class="rej-text" x="484" y="222">503</text>
+          </g>
+          <g>
+            <rect class="rej-box" x="588" y="196" width="72" height="40" rx="10"/>
+            <text class="rej-text" x="624" y="222">422</text>
+          </g>
+          <g>
+            <rect class="rej-box" x="728" y="196" width="72" height="40" rx="10"/>
+            <text class="rej-text" x="764" y="222">503</text>
+          </g>
+
+          <text class="gate-sub" x="480" y="292">Si una puerta falla, el dato no pasa a la siguiente — y nada se publica en la cola.</text>
+
+          <g class="gate-packet">
+            <circle class="packet-halo" cx="0" cy="0" r="14"/>
+            <circle class="packet-core" cx="0" cy="0" r="6"/>
+          </g>
+          <g class="gate-packet b">
+            <circle class="packet-halo" cx="0" cy="0" r="14"/>
+            <circle class="packet-core" cx="0" cy="0" r="6"/>
+          </g>
+        </svg>
+        <figcaption>El orden importa: cada cerradura es más barata de fallar que la siguiente. La última respuesta válida es un 202.</figcaption>
+      </figure>
+
+      <div class="callout">
+        <strong>La frase clave del capítulo:</strong> el <code>202</code> no significa «procesado».
+        Significa «aceptado para procesar». El trabajo recién empieza cuando el dato sale de la puerta.
+      </div>
+
+      <blockquote class="voice">
+        <p>«El receptor es una puerta estrecha. Un evento entra por <code>POST /webhook</code> y pasa por seis chequeos <strong>en un orden fijo</strong>. El orden importa: cada puerta es más barata que la anterior, así rechazamos rápido lo barato de rechazar.»</p>
+      </blockquote>
+    </section>
+
+    <section class="section wrap" id="cola" aria-labelledby="titulo-cola">
+      <div class="section-heading">
+        <p class="chapter-tag" data-n="03">Capítulo tres</p>
+        <h2 id="titulo-cola">La cinta que esconde</h2>
+        <p>
+          Una vez afuera de la puerta, el dato sube a una cinta transportadora. La cinta tiene una
+          particularidad: cuando alguien toma un paquete, lo <strong>esconde</strong> un rato para que
+          nadie más lo tome. Si quien lo tomó no lo devuelve a tiempo, el paquete reaparece solo.
+        </p>
+      </div>
+
+      <div class="numbers" aria-label="Los números de la cola">
+        <div class="number"><strong>45 s</strong><span>de visibilidad: el paquete escondido mientras trabaja</span></div>
+        <div class="number"><strong>4 días</strong><span>de retención en la cola de trabajo</span></div>
+        <div class="number"><strong>3</strong><span>recepciones sin confirmar y cambia de estantería</span></div>
+        <div class="number"><strong>14 días</strong><span>guardado en la DLQ, para diagnosticarlo después</span></div>
+      </div>
+
+      <div class="belt" role="img" aria-label="Animación de la cinta transportadora: los mensajes viajan, uno se esconde 45 segundos y un mensaje fallido cae en la DLQ.">
+        <span class="label">Cola de trabajo · estándar</span>
+        <span class="chip">evt-1</span>
+        <span class="chip hold">evt-2 · oculto 45 s</span>
+        <span class="chip lost">evt-3 · 3.ª falla</span>
+        <span class="shelf">DLQ<br/>3 fallos<br/>14 días</span>
+      </div>
+
+      <div class="prose" style="margin-top:1.6rem">
+        <p>
+          Hay dos caras en esta historia. La <strong>cola de trabajo</strong> recibe los eventos
+          validados. La <strong>cola de mensajes muertos</strong> —la DLQ— recibe lo que falló tres
+          veces. Están conectadas por una regla que nadie tiene que recordar: si un mensaje se recibe
+          tres veces sin confirmarse, SQS lo mueve solo.
+        </p>
+        <p>
+          Y un detalle que casi nadie menciona: es una cola <strong>estándar</strong>, no FIFO. No hay
+          orden garantizado y el mismo mensaje puede llegar dos veces. Eso no es un descuido: la
+          deduplicación se resuelve después, en el worker, con un ledger por <code>event_id</code>.
+        </p>
+      </div>
+
+      <blockquote class="voice">
+        <p>«La cola tiene dos caras. Están conectadas por una regla: si un mensaje se recibe tres veces sin confirmarse, SQS lo mueve solo a la DLQ. Los mensajes muertos se guardan para diagnosticarlos, <strong>no para borrarlos</strong>.»</p>
+      </blockquote>
+    </section>
+    <section class="section wrap" id="worker" aria-labelledby="titulo-worker">
+      <div class="section-heading">
+        <p class="chapter-tag" data-n="04">Capítulo cuatro</p>
+        <h2 id="titulo-worker">El trabajador que no miente</h2>
+        <p>
+          Al final de la cinta hay un trabajador. Hace una sola cosa en bucle: saca
+          <strong>un</strong> mensaje, lo procesa y decide si lo confirma o si lo devuelve.
+          Nunca procesa dos a la vez, y nunca re-publica un mensaje fallido — eso sería duplicar
+          trabajo.
+        </p>
+      </div>
+
+      <figure class="diagram-panel">
+        <svg viewBox="0 0 960 300" role="img" aria-labelledby="retry-title retry-desc">
+          <title id="retry-title">El ciclo de reintentos del worker</title>
+          <desc id="retry-desc">El worker rota en un bucle de reintentos con esperas de 2, 4 y 8 segundos. Tras tres recepciones fallidas, un puntero rojo marchoso lleva el mensaje a la DLQ.</desc>
+
+          <ellipse cx="330" cy="150" rx="150" ry="86" fill="none" stroke="rgba(251,191,36,0.45)" stroke-width="2" stroke-dasharray="6 8"/>
+          <text class="p-label retry" x="330" y="48">reintenta · nunca confirma a medias</text>
+
+          <g>
+            <rect class="n-box amber" x="230" y="112" width="200" height="76" rx="16"/>
+            <text class="n-title" x="330" y="144">Worker</text>
+            <text class="n-sub" x="330" y="166">procesa 1 mensaje por vez</text>
+          </g>
+
+          <g>
+            <rect x="490" y="60" width="86" height="34" rx="9" fill="rgba(251,191,36,0.12)" stroke="rgba(251,191,36,0.5)" stroke-width="1.5"/>
+            <text class="rej-text" x="533" y="83" fill="#fcd34d">2 s</text>
+          </g>
+          <g>
+            <rect x="490" y="132" width="86" height="34" rx="9" fill="rgba(251,191,36,0.12)" stroke="rgba(251,191,36,0.5)" stroke-width="1.5"/>
+            <text class="rej-text" x="533" y="155" fill="#fcd34d">4 s</text>
+          </g>
+          <g>
+            <rect x="490" y="204" width="86" height="34" rx="9" fill="rgba(251,191,36,0.12)" stroke="rgba(251,191,36,0.5)" stroke-width="1.5"/>
+            <text class="rej-text" x="533" y="227" fill="#fcd34d">8 s</text>
+          </g>
+
+          <path class="edge fail march" d="M 430 150 H 660"/>
+          <polygon points="660,150 648,144 648,156" fill="rgba(251,113,133,0.9)"/>
+          <text class="p-label fail" x="545" y="132">3.ª recepción fallida</text>
+
+          <g>
+            <rect class="n-box red" x="672" y="106" width="190" height="88" rx="16"/>
+            <text class="n-title" x="767" y="140">DLQ</text>
+            <text class="n-sub" x="767" y="162">el trabajador ya no la ve</text>
+            <text class="n-sub" x="767" y="180">guardada 14 días</text>
+          </g>
+
+          <text class="gate-sub" x="480" y="278">El worker no distingue «esto nunca va a funcionar» de «esto falló por ahora»: en ambos casos devuelve el mensaje y espera.</text>
+
+          <g class="orbit">
+            <circle class="packet-halo amber" cx="480" cy="150" r="14"/>
+            <circle class="packet-core amber" cx="480" cy="150" r="6"/>
+          </g>
+        </svg>
+        <figcaption>La espera crece con cada recepción: 2, 4 y 8 segundos. A la cuarta, el mensaje ya no llega al worker.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <p>
+          El worker pide un mensaje con espera larga de 10 segundos y lee
+          <code>ApproximateReceiveCount</code>: cuántas veces SQS ya entregó ese mensaje. De ahí sale
+          el cálculo de la espera, <code>min(30, 2^recepción)</code>.
+        </p>
+        <p>
+          Si todo sale bien, escribe el ledger y <strong>recién ahí</strong> confirma con
+          <code>delete_message</code>, usando el <code>ReceiptHandle</code> que le entregó SQS. Si algo
+          falla, no confirma: cambia la visibilidad y el mensaje vuelve a la cinta.
+        </p>
+        <p>
+          La sutileza que hay que repetir despacio: <strong>un error permanente también pasa por esta
+          misma cola de reintentos</strong>. El trabajador no se rinde solo — la DLQ es la que decide
+          cuándo el sistema se rinde, y lo hace a la tercera.
+        </p>
+      </div>
+
+      <blockquote class="voice">
+        <p>«Aquí está la parte que hay que repetir despacio: <strong>el worker no borra nada si falla</strong>. El mensaje sigue en la cola. Con espera de 2 segundos en el primer reintento, 4 en el segundo, 8 en el tercero. Si llega a una cuarta entrega, el worker ya no lo ve: la regla de la cola lo mandó a la DLQ.»</p>
+      </blockquote>
+    </section>
+
+    <section class="section wrap" id="reparacion" aria-labelledby="titulo-reparacion">
+      <div class="section-heading">
+        <p class="chapter-tag" data-n="05">Capítulo cinco</p>
+        <h2 id="titulo-reparacion">La memoria y la reparación</h2>
+        <p>
+          El trabajador decide confirmar o no. Pero <em>qué</em> hace con el mensaje está en
+          <code>remediation.handle</code>: cuatro etapas durables que no se pierden ni si el proceso
+          muere a mitad de camino.
+        </p>
+      </div>
+
+      <ol class="timeline" aria-label="Etapas durables de un evento">
+        <li>
+          <div>
+            <h3>El ledger recuerda</h3>
+            <p><span class="st">data/events.json</span> · Un registro por <code>event_id</code>. Si el evento ya terminó, se sale enseguida: procesarlo dos veces es gratis. Si el mismo <code>event_id</code> llega con contenido distinto, es un conflicto real y <strong>no se repara nada</strong>.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>El fallo simulado</h3>
+            <p><span class="st">simulate_failures: 0–5</span> · Para la demo, el evento puede fallar los primeros N intentos a propósito. Así se muestra el ciclo de reintentos sin romper nada real.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>La reparación convergente</h3>
+            <p><span class="st">EC2 · S3</span> · Si la instancia está <code>running</code>, ya está bien. Si está <code>stopped</code>, se arranca y se verifica. En S3 se leen las etiquetas, se verifica la propiedad, se fusionan las que faltan y se relee para confirmar. Si el inventario dice una cosa y el bucket otra, es un error permanente: no se pisa sin confirmar.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>El aviso, al final</h3>
+            <p><span class="st">repair_done → notified</span> · Recién cuando la reparación está verificada se manda el mensaje a Telegram con el <code>event_id</code>, el recurso y el resultado. Cada etapa se guarda en el ledger, así que si el worker muere a mitad, el reintento continúa desde donde estaba.</p>
+          </div>
+        </li>
+      </ol>
+
+      <div class="cards" style="margin-top:1.6rem">
+        <article class="card cyan">
+          <h3>EC2: arrancar, no inventar</h3>
+          <p>Solo inicia una instancia <code>stopped</code> y vuelve a consultar hasta confirmar <code>running</code>. Un estado raro es un error permanente, no una excusa para reintentar para siempre.</p>
+          <span class="file">src/fenix/services/remediation.py</span>
+        </article>
+        <article class="card violet">
+          <h3>S3: fusionar, no pisar</h3>
+          <p>Lee las etiquetas actuales, verifica la propiedad, agrega las esperadas y relee. Conserva las etiquetas que no entran en conflicto y respeta el límite de 50.</p>
+          <span class="file">_repair_bucket()</span>
+        </article>
+        <article class="card pink">
+          <h3>La memoria es un archivo</h3>
+          <p>El ledger se guarda con reemplazo atómico: primero un temporal, después el swap. Nunca queda a medias. Y cada evento lleva su propio <code>event_id</code>.</p>
+          <span class="file">src/fenix/utils/state.py</span>
+        </article>
+      </div>
+
+      <blockquote class="voice">
+        <p>«Cada etapa se guarda en el ledger: <code>repair_done</code>, <code>notified</code>, <code>status</code>. Si el worker muere a mitad de camino, el reintento continúa desde donde estaba, <strong>no empieza de cero</strong>.»</p>
+      </blockquote>
+    </section>
+    <section class="section wrap" id="demo" aria-labelledby="titulo-demo">
+      <div class="section-heading">
+        <p class="chapter-tag" data-n="06">Capítulo seis</p>
+        <h2 id="titulo-demo">La demo, en vivo</h2>
+        <p>
+          La historia se puede contar en una terminal. Cuatro movimientos: preparar, romper, enviar
+          y mirar. Cada paso tiene un resultado visible y ninguna credencial real de AWS.
+        </p>
+      </div>
+
+      <div class="command-stack">
+        <div class="command-card">
+          <h3>1 · Preparar el escenario</h3>
+          <p>Levanta LocalStack, crea las colas y deja los recursos listos con sus etiquetas de pertenencia.</p>
+          <pre><code>docker compose up -d
+./.venv/bin/python -m fenix.cli init-queues
+./.venv/bin/python -m fenix.cli setup-demo</code></pre>
+        </div>
+
+        <div class="command-card">
+          <h3>2 · Romper algo a propósito</h3>
+          <p>Se detiene la instancia propia. Después se confirma con el script de inspección que quedó <code>stopped</code>.</p>
+          <pre><code>./.venv/bin/python -m fenix.cli fault node-01
+./.venv/bin/python scripts/inspect_resources.py   # state=stopped</code></pre>
+        </div>
+
+        <div class="command-card">
+          <h3>3 · Enviar el evento firmado</h3>
+          <p>La CLI firma los bytes exactos del archivo y lo manda al webhook. Se espera un <code>202</code> con el <code>event_id</code>.</p>
+          <pre><code>./.venv/bin/python -m fenix.cli send examples/node-event.json
+# → 202 {"status": "accepted", "event_id": "...", "message_id": "..."}</code></pre>
+        </div>
+
+        <div class="command-card">
+          <h3>4 · Mirar el trabajo terminado</h3>
+          <p>El worker repara, verifica, avisa y confirma. Los logs viven en archivos, no en la terminal.</p>
+          <pre><code>tail -f logs/fenix-worker-*.jsonl   # message_acknowledged
+./.venv/bin/python scripts/inspect_resources.py   # state=running
+cat data/events.json                               # status: complete</code></pre>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>Qué mirar en pantalla:</strong> el <code>202</code> del receiver, el estado
+        <code>complete</code> del ledger, <code>repair_done=true</code>, <code>notified=true</code>
+        y la instancia de vuelta en <code>running</code>. Si algo falla, la DLQ es el mecanismo
+        visible de contención: <code>./.venv/bin/python scripts/check_dlq.py --peek</code>.
+      </div>
+
+      <div class="callout">
+        <strong>Ojo con un detalle de la demo:</strong> el ledger ya recuerda los eventos que
+        terminaron. Cada repetición necesita un <code>event_id</code> distinto, si no el sistema lo
+        toma como ya procesado y no vuelve a reparar — que, a fin de cuentas, es exactamente el
+        comportamiento correcto.
+      </div>
+    </section>
+
+    <section class="section wrap" id="limites" aria-labelledby="titulo-limites">
+      <div class="section-heading">
+        <p class="chapter-tag" data-n="07">Capítulo siete</p>
+        <h2 id="titulo-limites">Lo que este cuento no es</h2>
+        <p>
+          Toda historia honesta termina diciendo dónde llega hasta dónde. Estos son los límites
+          del sistema — y que los diga el propio equipo es lo que hace creíble el resto.
+        </p>
+      </div>
+
+      <div class="notes">
+        <article class="note cyan">
+          <h3>No es AWS real</h3>
+          <p>Todo corre sobre LocalStack en <code>127.0.0.1:4566</code>, con credenciales dummy. La lógica es la misma; el servicio no. Decirlo explícitamente evita la pregunta incómoda en la defensa.</p>
+        </article>
+        <article class="note amber">
+          <h3>La cola es at-least-once, no exactly-once</h3>
+          <p>El mensaje puede entregarse más de una vez y sin orden garantizado. La defensa contra los duplicados es el ledger por <code>event_id</code>, no la cola.</p>
+        </article>
+        <article class="note pink">
+          <h3>Telegram y el ledger no son una transacción</h3>
+          <p>Si el aviso se manda y el proceso muere antes de guardar <code>notified</code>, el reintento puede mandar otro aviso. Lo sabemos, está documentado, y es el precio de no tener una transacción distribuida.</p>
+        </article>
+        <article class="note violet">
+          <h3>Los logs no van a la terminal</h3>
+          <p>Viven en <code>logs/*.jsonl</code>, rotados y con contexto UTC. En el video se miran con <code>tail -f</code>, no se imprimen solos.</p>
+        </article>
+        <article class="note red">
+          <h3>El 202 no certifica reparación</h3>
+          <p>Certifica que el evento entró. La reparación se certifica después, con el ledger en <code>complete</code> y la instancia de vuelta en <code>running</code>.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section wrap" id="voz" aria-labelledby="titulo-voz">
+      <div class="section-heading">
+        <p class="kicker">Para la defensa</p>
+        <h2 id="titulo-voz">El guion completo, listo para leer</h2>
+        <p>
+          Esta página es la versión ilustrada. El guion exacto —con los comandos, los tiempos y las
+          frases por bloque— vive en el repositorio como documento Markdown.
+        </p>
+      </div>
+
+      <div class="cards">
+        <article class="card cyan">
+          <h3>Guion narrado</h3>
+          <p>10 bloques con NARRACIÓN, EN PANTALLA y diagramas Mermaid. Duración estimada de ~9 minutos.</p>
+          <span class="file">evidencias/video/guion-narracion.md</span>
+        </article>
+        <article class="card violet">
+          <h3>Sitio técnico</h3>
+          <p>El recorrido detallado de componentes, contratos, respuestas HTTP y fronteras de seguridad.</p>
+          <span class="file"><a href="index.html">index.html</a></span>
+        </article>
+        <article class="card green">
+          <h3>Evidencia verificable</h3>
+          <p>Matriz de verificación, ejecuciones de la suite y la captura redactada de Telegram real.</p>
+          <span class="file">evidencias/</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="section wrap" id="cierre" aria-labelledby="titulo-cierre">
+      <div class="section-heading">
+        <p class="kicker">Cierre</p>
+        <h2 id="titulo-cierre">La última línea</h2>
+      </div>
+
+      <div class="finale">
+        <p>Primero <strong>verificar</strong>, después <strong>actuar</strong>, y cada paso deja un <strong>rastro</strong>.</p>
+        <p class="sub">Un dato entra por seis puertas, sale con un 202, espera en una cinta, lo toma un worker que hace una cosa a la vez, repara, verifica, avisa y recién entonces confirma. Si algo falla, el mensaje no se pierde: espera, reintenta y a la tercera cae en una bandeja donde se puede mirar. Eso es Fénix.</p>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>
