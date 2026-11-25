@@ -442,52 +442,6 @@
     .note.amber { border-left-color: var(--amber); }
     .note.pink { border-left-color: var(--pink); }
 
-    .expo-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr); gap: 1rem; align-items: start; }
-    .timeline { display: grid; gap: 0.7rem; margin: 0; padding: 0; list-style: none; }
-    .timeline li {
-      display: grid;
-      grid-template-columns: 5.2rem minmax(0, 1fr);
-      gap: 0.9rem;
-      padding: 0.9rem 1rem;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: rgba(15, 23, 42, 0.62);
-    }
-    .time { color: var(--cyan); font-family: var(--mono); font-size: 0.78rem; font-weight: 700; }
-    .timeline h3 { margin: 0 0 0.2rem; font-size: 0.94rem; }
-    .timeline p { margin: 0; color: var(--muted); font-size: 0.84rem; }
-    .expo-side { display: grid; gap: 1rem; position: sticky; top: 86px; }
-    .command-card { padding: 1rem; border: 1px solid var(--line); border-radius: 18px; background: rgba(15, 23, 42, 0.72); }
-    .command-card h3 { margin: 0 0 0.25rem; font-size: 1rem; }
-    .command-card p { margin: 0 0 0.75rem; color: var(--muted); font-size: 0.84rem; }
-    .command-card pre { font-size: 0.75rem; }
-    .callout {
-      margin-top: 1.2rem;
-      padding: 1rem 1.1rem;
-      border: 1px solid rgba(34, 211, 238, 0.28);
-      border-radius: 16px;
-      background: linear-gradient(135deg, rgba(34, 211, 238, 0.08), rgba(167, 139, 250, 0.06));
-      color: var(--muted-strong);
-      font-size: 0.9rem;
-    }
-    .callout strong { color: var(--ink); }
-
-    .pages-box {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
-      gap: 1rem;
-      align-items: start;
-      padding: 1.2rem;
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      background: linear-gradient(150deg, rgba(167, 139, 250, 0.08), rgba(15, 23, 42, 0.75));
-    }
-    .pages-box h3 { margin: 0 0 0.5rem; }
-    .pages-box p { margin: 0 0 0.7rem; color: var(--muted); }
-    .pages-box ol { margin: 0; padding-left: 1.2rem; color: var(--muted-strong); }
-    .pages-box li { margin: 0.35rem 0; }
-    .pages-box code { overflow-wrap: anywhere; }
-
     footer {
       margin-top: clamp(4rem, 8vw, 7rem);
       border-top: 1px solid var(--line);
@@ -505,17 +459,15 @@
     .footer-inner p { margin: 0; max-width: 66ch; }
 
     @media (max-width: 980px) {
-      .hero, .security-layout, .expo-layout, .pages-box { grid-template-columns: 1fr; }
+      .hero, .security-layout { grid-template-columns: 1fr; }
       .hero { padding-top: 3rem; }
       .hero-media { order: -1; }
       .stat-grid, .cards, .contracts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .expo-side { position: static; }
     }
     @media (max-width: 660px) {
       .nav { align-items: flex-start; }
       .nav-links { display: none; }
       .stat-grid, .cards, .contracts, .steps { grid-template-columns: 1fr; }
-      .timeline li { grid-template-columns: 1fr; gap: 0.25rem; }
       h1 { max-width: 11ch; }
     }
     @media (prefers-reduced-motion: no-preference) {
@@ -523,10 +475,10 @@
       .card:hover, .step:hover { transform: translateY(-2px); border-color: rgba(34, 211, 238, 0.34); }
     }
     @media print {
-      .site-header, .hero-actions, .expo-side { display: none; }
+      .site-header, .hero-actions { display: none; }
       body { background: white; color: black; }
       .section { padding-top: 2rem; }
-      .card, .step, .contract, .timeline li, .note, .diagram-panel { break-inside: avoid; }
+      .card, .step, .contract, .note, .diagram-panel { break-inside: avoid; }
     }
   </style>
 </head>
@@ -545,7 +497,6 @@
         <li><a href="#componentes">Componentes</a></li>
         <li><a href="#contratos">Contratos</a></li>
         <li><a href="#seguridad">Seguridad</a></li>
-        <li><a href="#exposicion">Guion</a></li>
       </ul>
     </nav>
   </header>
@@ -567,9 +518,8 @@
           <li><span class="dot pink" aria-hidden="true"></span>Telegram real verificado</li>
         </ul>
         <div class="hero-actions">
-          <a class="button" href="historia.html">Leer la historia</a>
-          <a class="button ghost" href="#flujo">Recorrer el flujo</a>
-          <a class="button ghost" href="#exposicion">Ver guion de clase</a>
+          <a class="button" href="#flujo">Recorrer el flujo</a>
+          <a class="button ghost" href="historia.html">Leer la historia</a>
         </div>
       </div>
 
@@ -833,87 +783,6 @@
             <tr><td><strong>Reset de LocalStack</strong></td><td>La configuración y la demo se vuelven a preparar; el sistema converge.</td><td>El entorno es reproducible y no depende de estado oculto.</td></tr>
           </tbody>
         </table>
-      </div>
-    </section>
-
-    <section class="section wrap" id="exposicion" aria-labelledby="titulo-exposicion">
-      <div class="section-heading">
-        <p class="kicker">05 · La clase</p>
-        <h2 id="titulo-exposicion">Guion de 10 minutos</h2>
-        <p>Una secuencia para contar el proyecto sin leer código línea por línea: problema, recorrido, contratos, fallos y evidencia.</p>
-      </div>
-
-      <div class="expo-layout">
-        <ol class="timeline">
-          <li><span class="time">0:00–0:45</span><div><h3>El gancho</h3><p>“Una instancia se cae. El sistema se entera, se protege, repara y deja evidencia. Si no puede, no finge éxito.”</p></div></li>
-          <li><span class="time">0:45–1:45</span><div><h3>La arquitectura</h3><p>Muestra la imagen base y ubica los tres límites: receiver, cola y worker. El resto son consecuencias.</p></div></li>
-          <li><span class="time">1:45–3:00</span><div><h3>Entrada y firma</h3><p>Explica HMAC sobre bytes crudos, ventana de 300 s y por qué un 401 no publica nada.</p></div></li>
-          <li><span class="time">3:00–4:00</span><div><h3>Contrato cerrado</h3><p>El webhook solo acepta alias, no IDs de nube. Un campo extra o un tipo inválido termina en 422.</p></div></li>
-          <li><span class="time">4:00–5:00</span><div><h3>SQS y DLQ</h3><p>La cola desacopla. Tres recepciones fallidas llevan a la DLQ; el worker nunca ACKea un fallo.</p></div></li>
-          <li><span class="time">5:00–6:30</span><div><h3>Worker, ledger y reparación</h3><p>Muestra cómo se reanuda una etapa durable y cómo EC2/S3 se reparan solo si pertenecen al grupo.</p></div></li>
-          <li><span class="time">6:30–8:00</span><div><h3>Demo controlada</h3><p>Prepara, provoca el fallo, envía, ejecuta el worker y muestra el ledger completo y la notificación.</p></div></li>
-          <li><span class="time">8:00–9:00</span><div><h3>Fallo y evidencia</h3><p>Muestra la DLQ y la captura redactada de Telegram. La evidencia no publica secretos.</p></div></li>
-          <li><span class="time">9:00–9:30</span><div><h3>Límites honestos</h3><p>No hay transacción distribuida ni exactamente una vez. El ledger reduce duplicados; no los elimina por completo.</p></div></li>
-          <li><span class="time">9:30–10:00</span><div><h3>Cierre</h3><p>“Primero verificar, después reparar; si no se puede, dejar rastro y fallar de forma visible.”</p></div></li>
-        </ol>
-
-        <aside class="expo-side">
-          <div class="command-card">
-            <h3>Antes de la clase</h3>
-            <p>Prepara el entorno y deja la demo lista. No uses credenciales reales de AWS.</p>
-            <pre><code>docker compose up -d localstack
-./.venv/bin/python -m fenix.cli init-queues
-./.venv/bin/python -m fenix.cli setup-demo</code></pre>
-          </div>
-
-          <div class="command-card">
-            <h3>Durante la demo</h3>
-            <p>Un fallo, un envío, un worker y dos inspecciones. La idea es mostrar el viaje, no ejecutar todo el sistema.</p>
-            <pre><code>./.venv/bin/python -m fenix.cli fault node-01
-./.venv/bin/python -m fenix.cli send examples/node-event.json
-./.venv/bin/python -m fenix.cli worker --once
-./.venv/bin/python scripts/check_dlq.py
-./.venv/bin/python scripts/inspect_resources.py</code></pre>
-          </div>
-
-          <div class="callout">
-            <strong>Qué mirar en pantalla:</strong> el 202 del receiver, el estado <code>complete</code> del ledger,
-            <code>repair_done=true</code>, <code>notified=true</code> y la evidencia redactada de Telegram.
-            Si algo falla, la DLQ es el mecanismo visible de contención.
-          </div>
-        </aside>
-      </div>
-    </section>
-
-    <section class="section wrap" id="publicar" aria-labelledby="titulo-publicar">
-      <div class="section-heading">
-        <p class="kicker">06 · Publicación</p>
-        <h2 id="titulo-publicar">Habilitar GitHub Pages</h2>
-        <p>El sitio vive en <code>docs/</code> y no necesita build. El archivo <code>.nojekyll</code> evita que GitHub lo procese como Jekyll.</p>
-      </div>
-
-      <div class="pages-box">
-        <div>
-          <h3>Pasos en GitHub</h3>
-          <ol>
-            <li>Sube la carpeta <code>docs/</code> a la rama <code>main</code>.</li>
-            <li>Abre <strong>Settings → Pages</strong>.</li>
-            <li>En <strong>Build and deployment</strong>, elige <strong>Deploy from a branch</strong>.</li>
-            <li>Selecciona <strong>main</strong> y la carpeta <strong>/docs</strong>.</li>
-            <li>Guarda y espera a que GitHub publique la URL.</li>
-          </ol>
-        </div>
-        <div>
-          <h3>URL esperada</h3>
-          <p><code>https://&lt;usuario&gt;.github.io/Sistema-de-Autorreparacion-de-Infraestructura/</code></p>
-          <p>No subas <code>.env</code>, tokens, chat IDs, IDs de cuenta ni capturas sin redactar. La página es pública.</p>
-          <p><a href="https://docs.github.com/es/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site">Documentación oficial de GitHub Pages</a></p>
-        </div>
-      </div>
-
-      <div class="callout">
-        <strong>Nota para la defensa:</strong> esta página es material de apoyo. Las fuentes de verdad siguen siendo
-        <code>README.md</code>, <code>evidencias/matriz-verificacion.md</code> y los logs de <code>evidencias/ejecuciones/</code>.
       </div>
     </section>
   </main>
