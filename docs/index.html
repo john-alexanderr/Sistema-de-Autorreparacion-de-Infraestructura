@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Fénix: recorrido visual del dato, desde una alerta firmada hasta la reparación de infraestructura y la evidencia. Material de exposición.">
+  <title>Fénix · Cómo viaja el dato</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #060913;
+      --bg-soft: #0b1224;
+      --panel: rgba(15, 23, 42, 0.78);
+      --panel-solid: #0f172a;
+      --ink: #f8fafc;
+      --muted: #94a3b8;
+      --muted-strong: #cbd5e1;
+      --line: rgba(148, 163, 184, 0.18);
+      --cyan: #22d3ee;
+      --violet: #a78bfa;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --pink: #f472b6;
+      --red: #fb7185;
+      --radius: 22px;
+      --shadow: 0 24px 70px rgba(2, 6, 23, 0.55);
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --sans: "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(900px 520px at 12% -6%, rgba(34, 211, 238, 0.12), transparent 60%),
+        radial-gradient(800px 520px at 92% 4%, rgba(167, 139, 250, 0.14), transparent 60%),
+        radial-gradient(700px 440px at 50% 100%, rgba(244, 114, 182, 0.08), transparent 65%),
+        var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.6;
+      text-rendering: optimizeLegibility;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      background-image:
+        linear-gradient(rgba(148, 163, 184, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.035) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: linear-gradient(to bottom, black, transparent 88%);
+    }
+
+    a { color: var(--cyan); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+    a:hover { color: #a5f3fc; }
+    img { max-width: 100%; height: auto; }
+    code, pre { font-family: var(--mono); }
+    code {
+      padding: 0.12em 0.38em;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(2, 6, 23, 0.55);
+      color: #e2e8f0;
+      font-size: 0.9em;
+    }
+    pre {
+      margin: 0;
+      padding: 1.1rem 1.2rem;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #050a15;
+      color: #dbeafe;
+      font-size: 0.86rem;
+      line-height: 1.55;
+      tab-size: 2;
+    }
+    pre code { padding: 0; border: 0; background: none; color: inherit; font-size: inherit; }
+    ::selection { background: rgba(34, 211, 238, 0.28); color: white; }
+
+    .skip-link {
+      position: absolute;
+      top: -60px;
+      left: 18px;
+      z-index: 100;
+      padding: 0.7rem 1rem;
+      border-radius: 10px;
+      background: var(--cyan);
+      color: #04111d;
+      font-weight: 800;
+      text-decoration: none;
+    }
+    .skip-link:focus { top: 18px; }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid var(--line);
+      background: rgba(6, 9, 19, 0.78);
+      backdrop-filter: blur(18px);
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.2rem;
+      width: min(1180px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 0.9rem 0;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      color: var(--ink);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-decoration: none;
+    }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border: 1px solid rgba(34, 211, 238, 0.45);
+      border-radius: 11px;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.18), rgba(167, 139, 250, 0.18));
+      color: var(--cyan);
+      font-size: 0.82rem;
+      letter-spacing: 0.02em;
+    }
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.4rem 1rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .nav-links a:hover { color: var(--ink); }
+
+    main { overflow: clip; }
+    .wrap { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+      gap: clamp(2rem, 5vw, 4.5rem);
+      align-items: center;
+      padding: clamp(3.5rem, 8vw, 7rem) 0 clamp(3rem, 6vw, 5rem);
+    }
+    .eyebrow, .kicker {
+      margin: 0 0 0.9rem;
+      color: var(--cyan);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.19em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3 { line-height: 1.12; text-wrap: balance; }
+    h1 {
+      margin: 0;
+      max-width: 13ch;
+      font-size: clamp(2.7rem, 7vw, 5.6rem);
+      letter-spacing: -0.055em;
+      background: linear-gradient(115deg, #ffffff 14%, #a5f3fc 48%, #c4b5fd 82%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .lead {
+      max-width: 62ch;
+      margin: 1.4rem 0 0;
+      color: var(--muted-strong);
+      font-size: clamp(1.02rem, 1.7vw, 1.2rem);
+    }
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin: 1.6rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    .badges li {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.42rem 0.7rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.62);
+      color: var(--muted-strong);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px var(--green); }
+    .dot.cyan { background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+    .dot.violet { background: var(--violet); box-shadow: 0 0 12px var(--violet); }
+    .dot.pink { background: var(--pink); box-shadow: 0 0 12px var(--pink); }
+
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.8rem; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0.72rem 1.1rem;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--cyan), #67e8f9);
+      color: #04111d;
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 12px 30px rgba(34, 211, 238, 0.18);
+    }
+    .button:hover { color: #04111d; filter: brightness(1.06); }
+    .button.ghost {
+      border-color: var(--line);
+      background: rgba(15, 23, 42, 0.62);
+      color: var(--ink);
+      box-shadow: none;
+    }
+    .button.ghost:hover { border-color: rgba(34, 211, 238, 0.45); }
+
+    .hero-media { position: relative; }
+    .hero-media::before {
+      content: "";
+      position: absolute;
+      inset: -20px -18px 34px 18px;
+      z-index: -1;
+      border-radius: 30px;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(167, 139, 250, 0.18), rgba(244, 114, 182, 0.12));
+      filter: blur(28px);
+    }
+    .media-frame {
+      margin: 0;
+      padding: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 26px;
+      background: linear-gradient(145deg, rgba(34, 211, 238, 0.18), rgba(15, 23, 42, 0.82) 42%, rgba(167, 139, 250, 0.2));
+      box-shadow: var(--shadow);
+    }
+    .media-frame img { display: block; border-radius: 19px; }
+    .media-frame figcaption {
+      padding: 0.8rem 0.65rem 0.35rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.9rem;
+      padding: 1.4rem 0 0;
+    }
+    .stat {
+      padding: 1.05rem 1.1rem;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(8, 13, 27, 0.7));
+    }
+    .stat strong { display: block; color: var(--ink); font-size: 1.35rem; letter-spacing: -0.02em; }
+    .stat span { color: var(--muted); font-size: 0.81rem; }
+    .stat:nth-child(1) strong { color: var(--cyan); }
+    .stat:nth-child(2) strong { color: var(--violet); }
+    .stat:nth-child(3) strong { color: var(--amber); }
+    .stat:nth-child(4) strong { color: var(--green); }
+
+    .section { padding: clamp(4rem, 8vw, 7rem) 0 0; scroll-margin-top: 86px; }
+    .section-heading { max-width: 78ch; margin-bottom: 1.8rem; }
+    .section-heading h2 {
+      margin: 0;
+      font-size: clamp(2rem, 4.5vw, 3.6rem);
+      letter-spacing: -0.045em;
+    }
+    .section-heading p { margin: 1rem 0 0; color: var(--muted); font-size: 1.02rem; }
+    .section-heading p strong { color: var(--muted-strong); }
+
+    .diagram-panel {
+      margin: 0;
+      padding: 0.8rem;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 26px;
+      background: linear-gradient(160deg, rgba(34, 211, 238, 0.1), rgba(15, 23, 42, 0.9) 32%, rgba(167, 139, 250, 0.1));
+      box-shadow: var(--shadow);
+    }
+    .diagram-panel img { display: block; width: 100%; border-radius: 18px; }
+    .diagram-panel figcaption { padding: 0.8rem 0.65rem 0.3rem; color: var(--muted); font-size: 0.83rem; }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin-top: 1.4rem;
+      counter-reset: journey;
+    }
+    .step {
+      position: relative;
+      padding: 1.15rem 1.15rem 1.15rem 4.1rem;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.66);
+    }
+    .step::before {
+      counter-increment: journey;
+      content: counter(journey, decimal-leading-zero);
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      display: grid;
+      place-items: center;
+      width: 2.2rem;
+      height: 2.2rem;
+      border: 1px solid rgba(34, 211, 238, 0.38);
+      border-radius: 11px;
+      background: rgba(34, 211, 238, 0.1);
+      color: var(--cyan);
+      font-size: 0.76rem;
+      font-weight: 800;
+    }
+    .step h3 { margin: 0 0 0.35rem; font-size: 1.02rem; }
+    .step p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+    .step .tag {
+      display: inline-block;
+      margin-top: 0.65rem;
+      color: var(--muted-strong);
+      font-family: var(--mono);
+      font-size: 0.76rem;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.9rem;
+    }
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      padding: 1.15rem;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(8, 13, 27, 0.68));
+    }
+    .card h3 { margin: 0; font-size: 1.04rem; }
+    .card p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+    .card .file {
+      display: inline-block;
+      width: fit-content;
+      margin-top: auto;
+      padding: 0.25rem 0.45rem;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      color: var(--muted-strong);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      overflow-wrap: anywhere;
+    }
+    .card.cyan { border-top: 2px solid var(--cyan); }
+    .card.violet { border-top: 2px solid var(--violet); }
+    .card.green { border-top: 2px solid var(--green); }
+    .card.amber { border-top: 2px solid var(--amber); }
+    .card.pink { border-top: 2px solid var(--pink); }
+    .card.red { border-top: 2px solid var(--red); }
+
+    .contracts {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.9rem;
+      align-items: start;
+    }
+    .contract {
+      padding: 0.9rem;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.62);
+    }
+    .contract h3 { margin: 0.1rem 0 0.35rem; font-size: 0.98rem; }
+    .contract p { margin: 0 0 0.75rem; color: var(--muted); font-size: 0.84rem; }
+    .contract pre { font-size: 0.76rem; max-height: 340px; }
+
+    .table-wrap {
+      margin-top: 1.2rem;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow-x: auto;
+      background: rgba(15, 23, 42, 0.6);
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 680px; }
+    th, td { padding: 0.8rem 1rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 0.88rem; }
+    th { color: var(--muted-strong); font-size: 0.76rem; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(2, 6, 23, 0.42); }
+    td { color: var(--muted); }
+    td strong { color: var(--ink); }
+    tr:last-child td { border-bottom: 0; }
+    .status {
+      display: inline-block;
+      padding: 0.16rem 0.42rem;
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .s-202 { background: rgba(52, 211, 153, 0.14); color: #6ee7b7; }
+    .s-4xx { background: rgba(251, 191, 36, 0.13); color: #fcd34d; }
+    .s-4xx-red { background: rgba(251, 113, 133, 0.13); color: #fda4af; }
+    .s-5xx { background: rgba(244, 114, 182, 0.13); color: #f9a8d4; }
+
+    .security-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 1rem;
+      align-items: stretch;
+    }
+    .security-layout .diagram-panel { align-self: start; }
+    .security-notes { display: grid; gap: 0.75rem; }
+    .note {
+      padding: 1rem 1.05rem;
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--green);
+      border-radius: 0 16px 16px 0;
+      background: rgba(15, 23, 42, 0.62);
+    }
+    .note h3 { margin: 0 0 0.25rem; font-size: 0.98rem; }
+    .note p { margin: 0; color: var(--muted); font-size: 0.86rem; }
+    .note.cyan { border-left-color: var(--cyan); }
+    .note.violet { border-left-color: var(--violet); }
+    .note.amber { border-left-color: var(--amber); }
+    .note.pink { border-left-color: var(--pink); }
+
+    .expo-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr); gap: 1rem; align-items: start; }
+    .timeline { display: grid; gap: 0.7rem; margin: 0; padding: 0; list-style: none; }
+    .timeline li {
+      display: grid;
+      grid-template-columns: 5.2rem minmax(0, 1fr);
+      gap: 0.9rem;
+      padding: 0.9rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.62);
+    }
+    .time { color: var(--cyan); font-family: var(--mono); font-size: 0.78rem; font-weight: 700; }
+    .timeline h3 { margin: 0 0 0.2rem; font-size: 0.94rem; }
+    .timeline p { margin: 0; color: var(--muted); font-size: 0.84rem; }
+    .expo-side { display: grid; gap: 1rem; position: sticky; top: 86px; }
+    .command-card { padding: 1rem; border: 1px solid var(--line); border-radius: 18px; background: rgba(15, 23, 42, 0.72); }
+    .command-card h3 { margin: 0 0 0.25rem; font-size: 1rem; }
+    .command-card p { margin: 0 0 0.75rem; color: var(--muted); font-size: 0.84rem; }
+    .command-card pre { font-size: 0.75rem; }
+    .callout {
+      margin-top: 1.2rem;
+      padding: 1rem 1.1rem;
+      border: 1px solid rgba(34, 211, 238, 0.28);
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.08), rgba(167, 139, 250, 0.06));
+      color: var(--muted-strong);
+      font-size: 0.9rem;
+    }
+    .callout strong { color: var(--ink); }
+
+    .pages-box {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+      gap: 1rem;
+      align-items: start;
+      padding: 1.2rem;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: linear-gradient(150deg, rgba(167, 139, 250, 0.08), rgba(15, 23, 42, 0.75));
+    }
+    .pages-box h3 { margin: 0 0 0.5rem; }
+    .pages-box p { margin: 0 0 0.7rem; color: var(--muted); }
+    .pages-box ol { margin: 0; padding-left: 1.2rem; color: var(--muted-strong); }
+    .pages-box li { margin: 0.35rem 0; }
+    .pages-box code { overflow-wrap: anywhere; }
+
+    footer {
+      margin-top: clamp(4rem, 8vw, 7rem);
+      border-top: 1px solid var(--line);
+      background: rgba(6, 9, 19, 0.7);
+    }
+    .footer-inner {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 2rem 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+    .footer-inner p { margin: 0; max-width: 66ch; }
+
+    @media (max-width: 980px) {
+      .hero, .security-layout, .expo-layout, .pages-box { grid-template-columns: 1fr; }
+      .hero { padding-top: 3rem; }
+      .hero-media { order: -1; }
+      .stat-grid, .cards, .contracts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .expo-side { position: static; }
+    }
+    @media (max-width: 660px) {
+      .nav { align-items: flex-start; }
+      .nav-links { display: none; }
+      .stat-grid, .cards, .contracts, .steps { grid-template-columns: 1fr; }
+      .timeline li { grid-template-columns: 1fr; gap: 0.25rem; }
+      h1 { max-width: 11ch; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .button, .card, .step, .note { transition: transform 180ms ease, border-color 180ms ease; }
+      .card:hover, .step:hover { transform: translateY(-2px); border-color: rgba(34, 211, 238, 0.34); }
+    }
+    @media print {
+      .site-header, .hero-actions, .expo-side { display: none; }
+      body { background: white; color: black; }
+      .section { padding-top: 2rem; }
+      .card, .step, .contract, .timeline li, .note, .diagram-panel { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+  <header class="site-header">
+    <nav class="nav" aria-label="Navegación principal">
+      <a class="brand" href="#inicio" aria-label="Fénix, ir al inicio">
+        <span class="brand-mark" aria-hidden="true">FX</span>
+        <span>Fénix</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#flujo">Flujo</a></li>
+        <li><a href="#componentes">Componentes</a></li>
+        <li><a href="#contratos">Contratos</a></li>
+        <li><a href="#seguridad">Seguridad</a></li>
+        <li><a href="#exposicion">Guion</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="contenido">
+    <section class="hero wrap" id="inicio" aria-labelledby="titulo-principal">
+      <div>
+        <p class="eyebrow">Fénix · autorreparación local de infraestructura</p>
+        <h1 id="titulo-principal">El viaje del dato, de la alerta a la reparación.</h1>
+        <p class="lead">
+          Un evento firmado entra por el webhook, se valida, se encola y despierta a un worker.
+          El worker repara solo los recursos que le pertenecen, guarda evidencia y avisa por Telegram.
+          Si algo falla, el mensaje no se pierde: se reintenta y termina en una DLQ.
+        </p>
+        <ul class="badges" aria-label="Características principales">
+          <li><span class="dot cyan" aria-hidden="true"></span>HMAC-SHA256</li>
+          <li><span class="dot violet" aria-hidden="true"></span>SQS + DLQ</li>
+          <li><span class="dot" aria-hidden="true"></span>77 offline + 6 integración</li>
+          <li><span class="dot pink" aria-hidden="true"></span>Telegram real verificado</li>
+        </ul>
+        <div class="hero-actions">
+          <a class="button" href="#flujo">Recorrer el flujo</a>
+          <a class="button ghost" href="#exposicion">Ver guion de clase</a>
+        </div>
+      </div>
+
+      <figure class="hero-media">
+        <div class="media-frame">
+          <img src="assets/architecture.png" alt="Diagrama de arquitectura de Fénix con el receptor, la cola SQS, el worker, el ledger, la remediación EC2 y S3, y la notificación Telegram.">
+          <figcaption>Arquitectura de referencia. El detalle del recorrido continúa en el diagrama siguiente.</figcaption>
+        </div>
+      </figure>
+    </section>
+
+    <div class="wrap">
+      <div class="stat-grid" aria-label="Resumen del proyecto">
+        <div class="stat"><strong>8 etapas</strong><span>del evento firmado al ACK</span></div>
+        <div class="stat"><strong>3 intentos</strong><span>antes de la DLQ</span></div>
+        <div class="stat"><strong>16 KiB</strong><span>límite del cuerpo del webhook</span></div>
+        <div class="stat"><strong>0 recursos ajenos</strong><span>ownership tags antes de reparar</span></div>
+      </div>
+    </div>
+
+    <section class="section wrap" id="flujo" aria-labelledby="titulo-flujo">
+      <div class="section-heading">
+        <p class="kicker">01 · El recorrido</p>
+        <h2 id="titulo-flujo">Cómo viaja el dato</h2>
+        <p>
+          La idea central es simple: <strong>primero se verifica, después se actúa</strong>.
+          Cada etapa tiene una responsabilidad y una evidencia. Si una etapa falla, la siguiente no inventa un resultado.
+        </p>
+      </div>
+
+      <figure class="diagram-panel">
+        <img src="assets/flujo.svg" alt="Diagrama del flujo: emisor firmado, receiver, verificación HMAC y contrato, SQS, worker, ledger, remediación, Telegram y ACK. Los rechazos y reintentos derivan en la DLQ.">
+        <figcaption>Ruta feliz en la línea superior; fallos controlados, reintentos y DLQ en la línea inferior.</figcaption>
+      </figure>
+
+      <div class="steps">
+        <article class="step">
+          <h3>El emisor firma</h3>
+          <p>El cliente firma los bytes exactos del evento con HMAC-SHA256. La firma no protege un JSON re-serializado: protege lo que realmente se envía.</p>
+          <span class="tag">t=&lt;epoch&gt;,v1=&lt;64 hex&gt;</span>
+        </article>
+        <article class="step">
+          <h3>El receiver recibe</h3>
+          <p><code>POST /webhook</code> aplica el límite de 16 KiB, rechaza encabezados ambiguos y no confía en el cuerpo hasta autenticarlo.</p>
+          <span class="tag">HTTP 400 · 401 · 413 · 422 · 503</span>
+        </article>
+        <article class="step">
+          <h3>HMAC decide</h3>
+          <p>La firma cubre <code>timestamp + "." + body crudo</code>. La ventana es de 300 segundos y la comparación usa <code>compare_digest</code>.</p>
+          <span class="tag">firma inválida → 401, sin publicar</span>
+        </article>
+        <article class="step">
+          <h3>El contrato cierra la puerta</h3>
+          <p>El JSON debe ser un objeto cerrado. El alias debe existir en el inventario y <code>simulate_failures</code> debe ser un entero de 0 a 5.</p>
+          <span class="tag">node-01 · bucket-01</span>
+        </article>
+        <article class="step">
+          <h3>SQS desacopla</h3>
+          <p>Si SQS confirma la publicación, el receiver responde 202 con <code>status</code>, <code>event_id</code> y <code>message_id</code>. La cola es estándar, con visibilidad de 45 s.</p>
+          <span class="tag">202 Accepted · message_id</span>
+        </article>
+        <article class="step">
+          <h3>El worker toma el control</h3>
+          <p>El worker procesa un mensaje por recepción. Si falla, conserva el mensaje y ajusta su visibilidad; nunca hace ACK de un trabajo incompleto.</p>
+          <span class="tag">backoff min(30, 2^attempt)</span>
+        </article>
+        <article class="step">
+          <h3>El ledger recuerda</h3>
+          <p><code>data/events.json</code> se reemplaza de forma atómica. Guarda intentos, reparación, notificación, estado y conflictos para reanudar sin repetir etapas completas.</p>
+          <span class="tag">repair_done · notified · status</span>
+        </article>
+        <article class="step">
+          <h3>La reparación converge</h3>
+          <p>EC2 solo inicia una instancia detenida y verifica que quede <code>running</code>. S3 combina etiquetas esperadas, conserva las no relacionadas y relee para verificar.</p>
+          <span class="tag">ownership tags · sin recursos ajenos</span>
+        </article>
+        <article class="step">
+          <h3>Telegram avisa</h3>
+          <p>La notificación se envía después de la reparación. Los errores 429 o 5xx se reintentan con espera acotada; el proveedor puede aceptar un duplicado si el proceso cae justo después.</p>
+          <span class="tag">sendMessage · evidencia redactada</span>
+        </article>
+        <article class="step">
+          <h3>El ACK cierra el ciclo</h3>
+          <p>Solo cuando reparación y notificación están durables se borra el mensaje con el <code>ReceiptHandle</code> vigente. Un conflicto de <code>event_id</code> no se repara y termina en la DLQ.</p>
+          <span class="tag">delete_message · cierre durable</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="section wrap" id="componentes" aria-labelledby="titulo-componentes">
+      <div class="section-heading">
+        <p class="kicker">02 · Las piezas</p>
+        <h2 id="titulo-componentes">Cada parte del proyecto</h2>
+        <p>Esta es la vista para explicar el repositorio sin perderse: qué hace cada módulo, dónde vive y qué conviene decir en clase.</p>
+      </div>
+
+      <div class="cards">
+        <article class="card cyan">
+          <h3>Receiver</h3>
+          <p>Recibe el webhook, autentica la firma, valida el contrato y publica en SQS. Es la frontera entre “algo llegó” y “algo es aceptable”.</p>
+          <span class="file">src/fenix/services/receiver.py</span>
+        </article>
+        <article class="card green">
+          <h3>Contrato e inventario</h3>
+          <p>Define el JSON cerrado, los tipos de evento y la resolución del alias al recurso real. El webhook nunca recibe IDs de nube.</p>
+          <span class="file">src/fenix/services/events.py</span>
+        </article>
+        <article class="card violet">
+          <h3>SQS y DLQ</h3>
+          <p>Desacopla la recepción del procesamiento. La cola de trabajo redirige a la DLQ después de tres recepciones fallidas.</p>
+          <span class="file">src/fenix/services/sqs.py</span>
+        </article>
+        <article class="card amber">
+          <h3>Worker</h3>
+          <p>Orquesta el procesamiento: lee, registra intentos, decide ACK o reintento y no borra mensajes que todavía no terminaron.</p>
+          <span class="file">src/fenix/services/worker.py</span>
+        </article>
+        <article class="card amber">
+          <h3>Remediación</h3>
+          <p>Repara EC2 y S3 de forma convergente. Antes de tocar un recurso comprueba pertenencia y etiquetas; después relee el estado.</p>
+          <span class="file">src/fenix/services/remediation.py</span>
+        </article>
+        <article class="card pink">
+          <h3>Ledger durable</h3>
+          <p>Persiste el estado por evento con reemplazo atómico. Permite reanudar una notificación o reparación sin repetir lo ya confirmado.</p>
+          <span class="file">src/fenix/utils/state.py</span>
+        </article>
+        <article class="card pink">
+          <h3>Notificaciones</h3>
+          <p>Adaptador de Telegram con metadatos de confirmación. La evidencia real se captura por separado y se redacta antes de publicarse.</p>
+          <span class="file">src/fenix/services/notifications.py</span>
+        </article>
+        <article class="card cyan">
+          <h3>Observabilidad</h3>
+          <p>Logs JSON con contexto UTC, rotación y compresión gzip. La evidencia debe poder leerse sin filtrar secretos.</p>
+          <span class="file">src/fenix/utils/logging_json.py</span>
+        </article>
+        <article class="card violet">
+          <h3>CLI y demo</h3>
+          <p>Prepara colas y recursos, provoca fallos controlados, firma y envía eventos, y ejecuta el worker una vez para la demostración.</p>
+          <span class="file">src/fenix/cli.py · services/demo.py</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="section wrap" id="contratos" aria-labelledby="titulo-contratos">
+      <div class="section-heading">
+        <p class="kicker">03 · Los contratos</p>
+        <h2 id="titulo-contratos">Qué entra, qué se guarda y qué se puede afirmar</h2>
+        <p>Los ejemplos son sintéticos. La página no publica credenciales, IDs reales de cuenta ni contenido de mensajes.</p>
+      </div>
+
+      <div class="contracts">
+        <article class="contract">
+          <h3>Evento de entrada</h3>
+          <p>Objeto JSON cerrado. El alias se resuelve contra el inventario; no se aceptan IDs de nube en el cuerpo.</p>
+          <pre><code>{
+  "schema_version": 1,
+  "event_id": "evt-node-001",
+  "event_type": "instance.stopped",
+  "resource_id": "node-01",
+  "occurred_at": "2026-10-22T18:00:00Z",
+  "simulate_failures": 0
+}</code></pre>
+        </article>
+        <article class="contract">
+          <h3>Inventario</h3>
+          <p>El alias apunta al recurso y a sus etiquetas esperadas. La pertenencia se verifica antes de reparar.</p>
+          <pre><code>{
+  "node-01": {
+    "type": "ec2",
+    "id": "i-example",
+    "group_id": "grupo-01",
+    "expected_tags": {
+      "ManagedBy": "ppa2",
+      "Project": "fenix",
+      "GroupId": "grupo-01",
+      "Owner": "grupo-01"
+    }
+  }
+}</code></pre>
+        </article>
+        <article class="contract">
+          <h3>Ledger por evento</h3>
+          <p>El estado durable permite reanudar. La repetición de un <code>event_id</code> con contenido distinto se registra como conflicto.</p>
+          <pre><code>{
+  "evt-node-001": {
+    "attempts": 1,
+    "repair_done": true,
+    "repair_result": "repaired",
+    "notified": true,
+    "status": "complete",
+    "conflicts": []
+  }
+}</code></pre>
+        </article>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <caption class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">Respuestas HTTP del webhook</caption>
+          <thead>
+            <tr><th>Respuesta</th><th>Qué significa</th><th>Qué debe entender la audiencia</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="status s-202">202</span></td><td><strong>SQS confirmó la publicación.</strong></td><td>El receiver aceptó el evento; el trabajo todavía no terminó.</td></tr>
+            <tr><td><span class="status s-4xx">400</span></td><td>El cuerpo no es UTF-8 o no es JSON válido.</td><td>No se publica nada en la cola.</td></tr>
+            <tr><td><span class="status s-4xx-red">401</span></td><td>Firma faltante, duplicada, inválida o fuera de la ventana.</td><td>La autenticación se resuelve antes de interpretar el cuerpo.</td></tr>
+            <tr><td><span class="status s-4xx">413</span></td><td>El cuerpo supera los 16 KiB.</td><td>El límite protege memoria y superficie de ataque.</td></tr>
+            <tr><td><span class="status s-4xx">422</span></td><td>JSON válido, contrato o inventario inválido.</td><td>La forma es correcta; el contenido no es aceptable.</td></tr>
+            <tr><td><span class="status s-5xx">503</span></td><td>Inventario o SQS no disponibles.</td><td>El receiver no afirma haber aceptado el evento.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section wrap" id="seguridad" aria-labelledby="titulo-seguridad">
+      <div class="section-heading">
+        <p class="kicker">04 · Los límites</p>
+        <h2 id="titulo-seguridad">Seguridad y fallos controlados</h2>
+        <p>La confianza no se declara: se comprueba. Estos controles son los que permiten decir que el sistema no repara cualquier cosa que encuentre.</p>
+      </div>
+
+      <div class="security-layout">
+        <figure class="diagram-panel">
+          <img src="assets/seguridad.svg" alt="Fronteras de seguridad: HMAC-SHA256, perímetro local, credenciales dummy, ownership tags y evidencia redactada alrededor del dato protegido.">
+          <figcaption>El dato se verifica, el perímetro se limita y la evidencia se redacta.</figcaption>
+        </figure>
+
+        <div class="security-notes">
+          <article class="note">
+            <h3>Firma sobre bytes crudos</h3>
+            <p>El HMAC cubre timestamp, punto y cuerpo original. Re-serializar el JSON cambia los bytes y debe fallar. La ventana de 300 s limita replay.</p>
+          </article>
+          <article class="note cyan">
+            <h3>LocalStack, no AWS real</h3>
+            <p>El entorno aprobado usa <code>127.0.0.1:4566</code>, credenciales dummy y servicios SQS, S3 y EC2 emulados. No hay llamadas a AWS reales.</p>
+          </article>
+          <article class="note amber">
+            <h3>Ownership antes de reparar</h3>
+            <p>EC2 y S3 deben coincidir con <code>ManagedBy=ppa2</code>, <code>Project=fenix</code>, <code>GroupId</code> y <code>Owner</code>. Un recurso ajeno no se toca.</p>
+          </article>
+          <article class="note pink">
+            <h3>Evidencia sin secretos</h3>
+            <p>La captura real de Telegram confirma <code>ok: true</code>, pero omite token, chat ID, URL del Bot API, message ID y texto del mensaje.</p>
+          </article>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Fallo</th><th>Qué hace el sistema</th><th>Qué demuestra</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Firma inválida</strong></td><td>401 y cero publicaciones.</td><td>La autenticación ocurre antes de la lógica de negocio.</td></tr>
+            <tr><td><strong>Mensaje corrupto</strong></td><td>El worker no lo ACKea; SQS lo mueve a la DLQ tras tres recepciones.</td><td>Un mensaje problemático no frena al worker ni se pierde.</td></tr>
+            <tr><td><strong>Fallo persistente</strong></td><td>Sin reparación y sin ACK; el mensaje llega a la DLQ real.</td><td>La aplicación no finge éxito cuando no puede completar.</td></tr>
+            <tr><td><strong>Conflicto de event_id</strong></td><td>Conserva el primer contenido, registra el conflicto y no repara otra vez.</td><td>La idempotencia se apoya en el ledger, no en la memoria.</td></tr>
+            <tr><td><strong>Telegram 429 o 5xx</strong></td><td>Reintenta solo la notificación con espera acotada.</td><td>Una reparación confirmada no se repite por un fallo de mensajería.</td></tr>
+            <tr><td><strong>Reset de LocalStack</strong></td><td>La configuración y la demo se vuelven a preparar; el sistema converge.</td><td>El entorno es reproducible y no depende de estado oculto.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section wrap" id="exposicion" aria-labelledby="titulo-exposicion">
+      <div class="section-heading">
+        <p class="kicker">05 · La clase</p>
+        <h2 id="titulo-exposicion">Guion de 10 minutos</h2>
+        <p>Una secuencia para contar el proyecto sin leer código línea por línea: problema, recorrido, contratos, fallos y evidencia.</p>
+      </div>
+
+      <div class="expo-layout">
+        <ol class="timeline">
+          <li><span class="time">0:00–0:45</span><div><h3>El gancho</h3><p>“Una instancia se cae. El sistema se entera, se protege, repara y deja evidencia. Si no puede, no finge éxito.”</p></div></li>
+          <li><span class="time">0:45–1:45</span><div><h3>La arquitectura</h3><p>Muestra la imagen base y ubica los tres límites: receiver, cola y worker. El resto son consecuencias.</p></div></li>
+          <li><span class="time">1:45–3:00</span><div><h3>Entrada y firma</h3><p>Explica HMAC sobre bytes crudos, ventana de 300 s y por qué un 401 no publica nada.</p></div></li>
+          <li><span class="time">3:00–4:00</span><div><h3>Contrato cerrado</h3><p>El webhook solo acepta alias, no IDs de nube. Un campo extra o un tipo inválido termina en 422.</p></div></li>
+          <li><span class="time">4:00–5:00</span><div><h3>SQS y DLQ</h3><p>La cola desacopla. Tres recepciones fallidas llevan a la DLQ; el worker nunca ACKea un fallo.</p></div></li>
+          <li><span class="time">5:00–6:30</span><div><h3>Worker, ledger y reparación</h3><p>Muestra cómo se reanuda una etapa durable y cómo EC2/S3 se reparan solo si pertenecen al grupo.</p></div></li>
+          <li><span class="time">6:30–8:00</span><div><h3>Demo controlada</h3><p>Prepara, provoca el fallo, envía, ejecuta el worker y muestra el ledger completo y la notificación.</p></div></li>
+          <li><span class="time">8:00–9:00</span><div><h3>Fallo y evidencia</h3><p>Muestra la DLQ y la captura redactada de Telegram. La evidencia no publica secretos.</p></div></li>
+          <li><span class="time">9:00–9:30</span><div><h3>Límites honestos</h3><p>No hay transacción distribuida ni exactamente una vez. El ledger reduce duplicados; no los elimina por completo.</p></div></li>
+          <li><span class="time">9:30–10:00</span><div><h3>Cierre</h3><p>“Primero verificar, después reparar; si no se puede, dejar rastro y fallar de forma visible.”</p></div></li>
+        </ol>
+
+        <aside class="expo-side">
+          <div class="command-card">
+            <h3>Antes de la clase</h3>
+            <p>Prepara el entorno y deja la demo lista. No uses credenciales reales de AWS.</p>
+            <pre><code>docker compose up -d localstack
+./.venv/bin/python -m fenix.cli init-queues
+./.venv/bin/python -m fenix.cli setup-demo</code></pre>
+          </div>
+
+          <div class="command-card">
+            <h3>Durante la demo</h3>
+            <p>Un fallo, un envío, un worker y dos inspecciones. La idea es mostrar el viaje, no ejecutar todo el sistema.</p>
+            <pre><code>./.venv/bin/python -m fenix.cli fault node-01
+./.venv/bin/python -m fenix.cli send examples/node-event.json
+./.venv/bin/python -m fenix.cli worker --once
+./.venv/bin/python scripts/check_dlq.py
+./.venv/bin/python scripts/inspect_resources.py</code></pre>
+          </div>
+
+          <div class="callout">
+            <strong>Qué mirar en pantalla:</strong> el 202 del receiver, el estado <code>complete</code> del ledger,
+            <code>repair_done=true</code>, <code>notified=true</code> y la evidencia redactada de Telegram.
+            Si algo falla, la DLQ es el mecanismo visible de contención.
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section wrap" id="publicar" aria-labelledby="titulo-publicar">
+      <div class="section-heading">
+        <p class="kicker">06 · Publicación</p>
+        <h2 id="titulo-publicar">Habilitar GitHub Pages</h2>
+        <p>El sitio vive en <code>docs/</code> y no necesita build. El archivo <code>.nojekyll</code> evita que GitHub lo procese como Jekyll.</p>
+      </div>
+
+      <div class="pages-box">
+        <div>
+          <h3>Pasos en GitHub</h3>
+          <ol>
+            <li>Sube la carpeta <code>docs/</code> a la rama <code>main</code>.</li>
+            <li>Abre <strong>Settings → Pages</strong>.</li>
+            <li>En <strong>Build and deployment</strong>, elige <strong>Deploy from a branch</strong>.</li>
+            <li>Selecciona <strong>main</strong> y la carpeta <strong>/docs</strong>.</li>
+            <li>Guarda y espera a que GitHub publique la URL.</li>
+          </ol>
+        </div>
+        <div>
+          <h3>URL esperada</h3>
+          <p><code>https://&lt;usuario&gt;.github.io/Sistema-de-Autorreparacion-de-Infraestructura/</code></p>
+          <p>No subas <code>.env</code>, tokens, chat IDs, IDs de cuenta ni capturas sin redactar. La página es pública.</p>
+          <p><a href="https://docs.github.com/es/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site">Documentación oficial de GitHub Pages</a></p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>Nota para la defensa:</strong> esta página es material de apoyo. Las fuentes de verdad siguen siendo
+        <code>README.md</code>, <code>evidencias/matriz-verificacion.md</code> y los logs de <code>evidencias/ejecuciones/</code>.
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footer-inner">
+      <p><strong>Fénix</strong> · autorreparación local de infraestructura. Página de exposición basada en el repositorio y su evidencia verificable.</p>
+      <p>LocalStack · SQS · S3 · EC2 · FastAPI · Telegram · HMAC-SHA256</p>
+    </div>
+  </footer>
+</body>
+</html>

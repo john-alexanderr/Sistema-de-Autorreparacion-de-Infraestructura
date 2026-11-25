@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 760" role="img" aria-labelledby="title desc">
+  <title id="title">Flujo end-to-end de Fénix</title>
+  <desc id="desc">El dato viaja desde un emisor firmado hasta el receiver, la verificación HMAC y de contrato, la cola SQS, el worker, el ledger, la remediación y la notificación Telegram con ACK. Los rechazos y reintentos terminan en la DLQ.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#070b18"/>
+      <stop offset="0.55" stop-color="#0b1226"/>
+      <stop offset="1" stop-color="#101a36"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="0.5" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#f472b6"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#fb7185"/>
+    </marker>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <style>
+      .eyebrow { font: 700 13px/1.2 'Segoe UI', Arial, sans-serif; letter-spacing: 2.5px; fill: #67e8f9; }
+      .title { font: 800 42px/1.1 'Segoe UI', Arial, sans-serif; fill: #f8fafc; }
+      .subtitle { font: 400 17px/1.4 'Segoe UI', Arial, sans-serif; fill: #94a3b8; }
+      .node-title { font: 700 16px/1.2 'Segoe UI', Arial, sans-serif; fill: #f8fafc; }
+      .node-sub { font: 400 12px/1.25 'Segoe UI', Arial, sans-serif; fill: #94a3b8; }
+      .num { font: 800 13px/1 'Segoe UI', Arial, sans-serif; fill: #06111f; }
+      .lane-label { font: 700 12px/1 'Segoe UI', Arial, sans-serif; letter-spacing: 1.5px; fill: #94a3b8; }
+      .fail-title { font: 700 14px/1.2 'Segoe UI', Arial, sans-serif; fill: #fecdd3; }
+      .fail-sub { font: 400 11px/1.3 'Segoe UI', Arial, sans-serif; fill: #fda4af; }
+      .pill { font: 600 12px/1 'Segoe UI', Arial, sans-serif; fill: #cbd5e1; }
+      .path { stroke: #94a3b8; stroke-width: 2; fill: none; }
+      .path-red { stroke: #fb7185; stroke-width: 2; fill: none; stroke-dasharray: 5 5; }
+      .box { fill: #0f172a; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="760" fill="url(#bg)"/>
+  <circle cx="1320" cy="80" r="180" fill="#22d3ee" opacity="0.06"/>
+  <circle cx="120" cy="680" r="220" fill="#a78bfa" opacity="0.06"/>
+
+  <text x="60" y="64" class="eyebrow">FÉNIX · FLUJO END-TO-END</text>
+  <text x="60" y="112" class="title">Cómo viaja el dato</text>
+  <text x="60" y="145" class="subtitle">Un evento firmado entra, se valida, se encola, se repara y deja evidencia. Si algo falla, no se pierde: se reintenta y termina en la DLQ.</text>
+
+  <!-- main lane -->
+  <text x="60" y="208" class="lane-label">RUTA FELIZ</text>
+  <line x1="60" y1="220" x2="1242" y2="220" stroke="url(#hero)" stroke-width="2" opacity="0.7"/>
+
+  <!-- arrows -->
+  <path class="path" d="M192 292 H210" marker-end="url(#arrow)"/>
+  <path class="path" d="M342 292 H360" marker-end="url(#arrow)"/>
+  <path class="path" d="M492 292 H510" marker-end="url(#arrow)"/>
+  <path class="path" d="M642 292 H660" marker-end="url(#arrow)"/>
+  <path class="path" d="M792 292 H810" marker-end="url(#arrow)"/>
+  <path class="path" d="M942 292 H960" marker-end="url(#arrow)"/>
+  <path class="path" d="M1092 292 H1110" marker-end="url(#arrow)"/>
+
+  <!-- node 1 -->
+  <g>
+    <rect class="box" x="60" y="240" width="132" height="104" rx="18" stroke="#a78bfa"/>
+    <circle cx="84" cy="266" r="15" fill="#a78bfa"/>
+    <text x="84" y="271" text-anchor="middle" class="num">1</text>
+    <text x="76" y="302" class="node-title">Emisor</text>
+    <text x="76" y="322" class="node-sub">evento firmado</text>
+  </g>
+
+  <!-- node 2 -->
+  <g>
+    <rect class="box" x="210" y="240" width="132" height="104" rx="18" stroke="#22d3ee"/>
+    <circle cx="234" cy="266" r="15" fill="#22d3ee"/>
+    <text x="234" y="271" text-anchor="middle" class="num">2</text>
+    <text x="226" y="302" class="node-title">Receiver</text>
+    <text x="226" y="322" class="node-sub">FastAPI · 202</text>
+  </g>
+
+  <!-- node 3 -->
+  <g>
+    <rect class="box" x="360" y="240" width="132" height="104" rx="18" stroke="#34d399"/>
+    <circle cx="384" cy="266" r="15" fill="#34d399"/>
+    <text x="384" y="271" text-anchor="middle" class="num">3</text>
+    <text x="376" y="302" class="node-title">Verificación</text>
+    <text x="376" y="322" class="node-sub">HMAC · contrato</text>
+  </g>
+
+  <!-- node 4 -->
+  <g>
+    <rect class="box" x="510" y="240" width="132" height="104" rx="18" stroke="#60a5fa"/>
+    <circle cx="534" cy="266" r="15" fill="#60a5fa"/>
+    <text x="534" y="271" text-anchor="middle" class="num">4</text>
+    <text x="526" y="302" class="node-title">SQS</text>
+    <text x="526" y="322" class="node-sub">work queue</text>
+  </g>
+
+  <!-- node 5 -->
+  <g>
+    <rect class="box" x="660" y="240" width="132" height="104" rx="18" stroke="#f59e0b"/>
+    <circle cx="684" cy="266" r="15" fill="#f59e0b"/>
+    <text x="684" y="271" text-anchor="middle" class="num">5</text>
+    <text x="676" y="302" class="node-title">Worker</text>
+    <text x="676" y="322" class="node-sub">consume · retry</text>
+  </g>
+
+  <!-- node 6 -->
+  <g>
+    <rect class="box" x="810" y="240" width="132" height="104" rx="18" stroke="#f472b6"/>
+    <circle cx="834" cy="266" r="15" fill="#f472b6"/>
+    <text x="834" y="271" text-anchor="middle" class="num">6</text>
+    <text x="826" y="302" class="node-title">Ledger</text>
+    <text x="826" y="322" class="node-sub">estado durable</text>
+  </g>
+
+  <!-- node 7 -->
+  <g>
+    <rect class="box" x="960" y="240" width="132" height="104" rx="18" stroke="#facc15"/>
+    <circle cx="984" cy="266" r="15" fill="#facc15"/>
+    <text x="984" y="271" text-anchor="middle" class="num">7</text>
+    <text x="976" y="302" class="node-title">Remediación</text>
+    <text x="976" y="322" class="node-sub">EC2 · S3 · SG</text>
+  </g>
+
+  <!-- node 8 -->
+  <g>
+    <rect class="box" x="1110" y="240" width="132" height="104" rx="18" stroke="#2dd4bf"/>
+    <circle cx="1134" cy="266" r="15" fill="#2dd4bf"/>
+    <text x="1134" y="271" text-anchor="middle" class="num">8</text>
+    <text x="1126" y="302" class="node-title">Telegram + ACK</text>
+    <text x="1126" y="322" class="node-sub">notifica · borra</text>
+  </g>
+
+  <!-- failure lane -->
+  <text x="60" y="424" class="lane-label">RUTA DE FALLO CONTROLADO</text>
+  <line x1="60" y1="436" x2="1242" y2="436" stroke="#fb7185" stroke-width="2" opacity="0.55" stroke-dasharray="7 7"/>
+
+  <path class="path-red" d="M426 344 V478" marker-end="url(#arrowRed)"/>
+  <path class="path-red" d="M576 344 V478" marker-end="url(#arrowRed)"/>
+  <path class="path-red" d="M726 344 V478" marker-end="url(#arrowRed)"/>
+  <path class="path-red" d="M870 510 H930" marker-end="url(#arrowRed)"/>
+
+  <g>
+    <rect x="300" y="478" width="252" height="86" rx="16" fill="#2a101b" stroke="#fb7185" stroke-width="2"/>
+    <text x="318" y="506" class="fail-title">Rechazo inmediato</text>
+    <text x="318" y="528" class="fail-sub">400 JSON · 401 firma · 413 tamaño</text>
+    <text x="318" y="548" class="fail-sub">422 contrato · sin publicar en SQS</text>
+  </g>
+
+  <g>
+    <rect x="500" y="478" width="220" height="86" rx="16" fill="#2a101b" stroke="#fb7185" stroke-width="2"/>
+    <text x="518" y="506" class="fail-title">503 dependencia</text>
+    <text x="518" y="528" class="fail-sub">SQS o inventario no disponible</text>
+    <text x="518" y="548" class="fail-sub">el cliente puede reintentar</text>
+  </g>
+
+  <g>
+    <rect x="650" y="478" width="220" height="86" rx="16" fill="#2a101b" stroke="#fb7185" stroke-width="2"/>
+    <text x="668" y="506" class="fail-title">Reintentos</text>
+    <text x="668" y="528" class="fail-sub">visibility timeout</text>
+    <text x="668" y="548" class="fail-sub">1 → 2 → 3 · sin ACK prematuro</text>
+  </g>
+
+  <g>
+    <rect x="930" y="478" width="210" height="86" rx="16" fill="#2a101b" stroke="#fb7185" stroke-width="2"/>
+    <text x="948" y="506" class="fail-title">DLQ + alerta</text>
+    <text x="948" y="528" class="fail-sub">maxReceiveCount = 3</text>
+    <text x="948" y="548" class="fail-sub">inspección con check_dlq.py</text>
+  </g>
+
+  <!-- security band -->
+  <rect x="60" y="642" width="1182" height="58" rx="29" fill="#0b172a" stroke="#1e3a5f"/>
+  <circle cx="92" cy="671" r="8" fill="#34d399"/>
+  <text x="110" y="676" class="pill">HMAC-SHA256</text>
+  <circle cx="252" cy="671" r="8" fill="#34d399"/>
+  <text x="270" y="676" class="pill">ventana 300 s</text>
+  <circle cx="402" cy="671" r="8" fill="#34d399"/>
+  <text x="420" y="676" class="pill">límite 16 KiB</text>
+  <circle cx="552" cy="671" r="8" fill="#34d399"/>
+  <text x="570" y="676" class="pill">LocalStack loopback 4566</text>
+  <circle cx="782" cy="671" r="8" fill="#34d399"/>
+  <text x="800" y="676" class="pill">ownership tags</text>
+  <circle cx="962" cy="671" r="8" fill="#34d399"/>
+  <text x="980" y="676" class="pill">sin AWS real</text>
+  <circle cx="1122" cy="671" r="8" fill="#34d399"/>
+  <text x="1140" y="676" class="pill">evidencia redactada</text>
+</svg>

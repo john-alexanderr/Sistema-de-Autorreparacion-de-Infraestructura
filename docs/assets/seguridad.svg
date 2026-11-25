@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" role="img" aria-labelledby="title desc">
+  <title id="title">Fronteras de seguridad de Fénix</title>
+  <desc id="desc">El dato se protege con HMAC-SHA256, una ventana temporal, límite de tamaño, LocalStack en loopback, credenciales dummy, ownership tags y evidencia redactada.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="75%">
+      <stop offset="0" stop-color="#0d1830"/>
+      <stop offset="0.7" stop-color="#080d1b"/>
+      <stop offset="1" stop-color="#050811"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="0.5" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#34d399"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#0891b2"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <style>
+      .eyebrow { font: 700 13px/1.2 'Segoe UI', Arial, sans-serif; letter-spacing: 2.5px; fill: #67e8f9; }
+      .title { font: 800 38px/1.1 'Segoe UI', Arial, sans-serif; fill: #f8fafc; }
+      .subtitle { font: 400 16px/1.4 'Segoe UI', Arial, sans-serif; fill: #94a3b8; }
+      .box-title { font: 700 16px/1.2 'Segoe UI', Arial, sans-serif; fill: #f8fafc; }
+      .box-sub { font: 400 12px/1.35 'Segoe UI', Arial, sans-serif; fill: #94a3b8; }
+      .center-title { font: 800 20px/1.1 'Segoe UI', Arial, sans-serif; fill: #f8fafc; }
+      .center-sub { font: 600 11px/1.2 'Segoe UI', Arial, sans-serif; letter-spacing: 1.8px; fill: #a7f3d0; }
+      .line { stroke: url(#ring); stroke-width: 1.5; opacity: 0.5; fill: none; }
+      .label { font: 700 11px/1 'Segoe UI', Arial, sans-serif; letter-spacing: 1.2px; fill: #64748b; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="640" fill="url(#bg)"/>
+  <circle cx="150" cy="90" r="160" fill="#22d3ee" opacity="0.05"/>
+  <circle cx="1080" cy="560" r="180" fill="#a78bfa" opacity="0.05"/>
+
+  <text x="60" y="58" class="eyebrow">FÉNIX · SEGURIDAD</text>
+  <text x="60" y="102" class="title">Fronteras que protegen el dato</text>
+  <text x="60" y="132" class="subtitle">Cada control responde a una amenaza concreta. El objetivo no es “confiar”: es verificar antes de reparar.</text>
+
+  <!-- connecting lines -->
+  <path class="line" d="M380 185 C470 230 505 265 540 285"/>
+  <path class="line" d="M820 185 C730 230 695 265 660 285"/>
+  <path class="line" d="M380 455 C470 410 505 375 540 355"/>
+  <path class="line" d="M820 455 C730 410 695 375 660 355"/>
+  <path class="line" d="M600 520 V410"/>
+
+  <!-- center shield -->
+  <circle cx="600" cy="320" r="126" fill="none" stroke="url(#ring)" stroke-width="3" opacity="0.55"/>
+  <circle cx="600" cy="320" r="104" fill="#0a1628" stroke="#1e3a5f" stroke-width="2"/>
+  <path d="M600 246 L646 264 V314 C646 350 627 374 600 390 C573 374 554 350 554 314 V264 Z" fill="url(#shield)" opacity="0.16" stroke="#34d399" stroke-width="2" filter="url(#glow)"/>
+  <path d="M583 318 L596 331 L622 301" fill="none" stroke="#a7f3d0" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="600" y="360" text-anchor="middle" class="center-title">Dato protegido</text>
+  <text x="600" y="382" text-anchor="middle" class="center-sub">VERIFICAR ANTES DE ACTUAR</text>
+
+  <!-- top-left -->
+  <g>
+    <rect x="80" y="100" width="300" height="96" rx="18" fill="#0b172a" stroke="#22d3ee" stroke-width="2"/>
+    <rect x="102" y="122" width="52" height="52" rx="14" fill="#22d3ee" opacity="0.16"/>
+    <path d="M119 150 h18 v14 h-18 z M122 150 v-7 a6 6 0 0 1 12 0 v7" fill="none" stroke="#67e8f9" stroke-width="2.5" stroke-linejoin="round"/>
+    <text x="170" y="137" class="box-title">HMAC-SHA256</text>
+    <text x="170" y="159" class="box-sub">timestamp + punto + body crudo</text>
+    <text x="170" y="177" class="box-sub">ventana de 300 s · compare_digest</text>
+  </g>
+
+  <!-- top-right -->
+  <g>
+    <rect x="820" y="100" width="300" height="96" rx="18" fill="#0b172a" stroke="#a78bfa" stroke-width="2"/>
+    <rect x="842" y="122" width="52" height="52" rx="14" fill="#a78bfa" opacity="0.16"/>
+    <path d="M856 158 h24 M862 148 h12 M862 158 v-8 M868 158 v-8" stroke="#c4b5fd" stroke-width="2.5" stroke-linecap="round"/>
+    <text x="910" y="137" class="box-title">Perímetro local</text>
+    <text x="910" y="159" class="box-sub">LocalStack solo en 127.0.0.1:4566</text>
+    <text x="910" y="177" class="box-sub">sin credenciales ni recursos AWS reales</text>
+  </g>
+
+  <!-- bottom-left -->
+  <g>
+    <rect x="80" y="440" width="300" height="96" rx="18" fill="#0b172a" stroke="#facc15" stroke-width="2"/>
+    <rect x="102" y="462" width="52" height="52" rx="14" fill="#facc15" opacity="0.14"/>
+    <path d="M118 488 a10 10 0 1 1 20 0 a10 10 0 0 1 -20 0 M128 472 v6 M128 498 v6" fill="none" stroke="#fde68a" stroke-width="2.5" stroke-linecap="round"/>
+    <text x="170" y="477" class="box-title">Credenciales dummy</text>
+    <text x="170" y="499" class="box-sub">test/test · región fija · puerto local</text>
+    <text x="170" y="517" class="box-sub">nunca se publican ni se versionan</text>
+  </g>
+
+  <!-- bottom-right -->
+  <g>
+    <rect x="820" y="440" width="300" height="96" rx="18" fill="#0b172a" stroke="#34d399" stroke-width="2"/>
+    <rect x="842" y="462" width="52" height="52" rx="14" fill="#34d399" opacity="0.14"/>
+    <path d="M852 480 h32 v20 h-32 z M856 480 v-6 a12 12 0 0 1 24 0 v6" fill="none" stroke="#a7f3d0" stroke-width="2.5" stroke-linejoin="round"/>
+    <text x="910" y="477" class="box-title">Ownership tags</text>
+    <text x="910" y="499" class="box-sub">ManagedBy=ppa2 · Project=fenix</text>
+    <text x="910" y="517" class="box-sub">GroupId · Owner · no tocar recursos ajenos</text>
+  </g>
+
+  <!-- bottom center -->
+  <g>
+    <rect x="420" y="530" width="360" height="78" rx="18" fill="#0b172a" stroke="#f472b6" stroke-width="2"/>
+    <rect x="442" y="550" width="40" height="40" rx="12" fill="#f472b6" opacity="0.14"/>
+    <path d="M452 570 q10 -14 20 0 q-10 14 -20 0 M462 566 v8" fill="none" stroke="#f9a8d4" stroke-width="2.5" stroke-linecap="round"/>
+    <text x="498" y="565" class="box-title">Evidencia redactada</text>
+    <text x="498" y="585" class="box-sub">sin token, chat ID, message ID ni texto</text>
+  </g>
+
+  <!-- bottom note -->
+  <text x="600" y="624" text-anchor="middle" class="label">EL DATO SE VERIFICA · EL PERÍMETRO SE LIMITA · LA EVIDENCIA SE REDACTA</text>
+</svg>
