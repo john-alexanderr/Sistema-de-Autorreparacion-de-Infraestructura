@@ -25,9 +25,9 @@ El equipo docente aprobó una excepción para equipos de dos personas. Esto no e
 ## Requisitos previos
 
 - Python 3.12.3 es la versión objetivo seleccionada por el equipo del proyecto y está verificada en el entorno `.venv` de esta copia. La segunda persona del equipo también debe usar Python 3.12.3; su entorno todavía no se verificó. `pyproject.toml` mantiene `requires-python = ">=3.11"` porque el curso permite versiones más recientes y los metadatos conservan una versión mínima de compatibilidad, en lugar de fijar la versión objetivo del equipo.
-- Docker Desktop con su motor WSL2, Docker Compose y la imagen y configuración de autorización de LocalStack aprobadas para el curso.
+- Docker Desktop con su motor WSL2, Docker Compose y la imagen y configuración de autorización de LocalStack aprobadas .
 - Un bot y un chat de Telegram configurados por el equipo fuera del control de versiones. Nunca pegues credenciales en incidencias, chats, capturas de pantalla ni en este README.
-- La guía aprobada del curso y las reglas para nombrar recursos.
+- LaS reglas para nombrar recursos.
 
 `requirements.txt` declara las dependencias directas; `requirements-lock.txt` registra las versiones de paquetes instaladas en el entorno `.venv` verificado con Python 3.12.3, incluida una referencia portable al proyecto editable (`-e .`). El archivo de bloqueo no usa una ruta específica de una máquina. Ambas personas del equipo deben usar la versión seleccionada de Python; confirma el intérprete de la segunda persona antes de considerar alineados los entornos del equipo. No uses una imagen de LocalStack no aprobada ni copies un token de autorización de ejemplo en un artefacto compartido. El cliente del SDK de AWS rechaza los endpoints que no sean el puerto de loopback 4566 y requiere credenciales ficticias de LocalStack proporcionadas mediante el entorno.
 
